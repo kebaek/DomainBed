@@ -70,6 +70,7 @@ class ERM(Algorithm):
             lr=self.hparams["lr"],
             weight_decay=self.hparams['weight_decay']
         )
+        print(self.featurizer.n_outputs)
 
     def update(self, minibatches):
         all_x = torch.cat([x for x,y in minibatches])
@@ -125,16 +126,17 @@ class MCR(Algorithm):
 
         for j in range(self.num_classes):
             u,s,vt = torch.svd(sorted_data[j])
-            self.components[j] = vt
+            self.components[j] = vt.t()[:self.hparams['n_comp']]
 
     def predict(self, x):
         x = self.featurizer(x)
         scores_svd = []
         for j in range(self.num_classes):
-            svd_j = torch.matmul((np.eye(self.hparams['fd']) - torch.matmul(self.components[j].t(),self.components[j])),x.t())
-            score_svd_j = np.linalg.norm(svd_j, ord=2, axis=0)
+            svd_j = torch.matmul(torch.eye(self.hparams['fd']).cuda() - torch.matmul(self.components[j].t(),self.components[j]),x.t())
+            score_svd_j = torch.norm(svd_j, dim=0)
             scores_svd.append(score_svd_j)
-        return np.argmin(scores_svd, axis=0)
+        p = torch.argmin(torch.stack(scores_svd), dim=0)
+        return F.one_hot(p, self.num_classes)
 
 
 class AbstractDANN(Algorithm):

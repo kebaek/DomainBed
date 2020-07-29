@@ -91,12 +91,12 @@ class MNIST_CNN(nn.Module):
         self.bn1 = nn.GroupNorm(8, 128)
         self.bn2 = nn.GroupNorm(8, 128)
         self.bn3 = nn.GroupNorm(8, 128)
-        self.reshape = torch.nn.Sequential(
-            nn.Linear(128, 128, bias=False),
-            nn.BatchNorm1d(128),
-            nn.ReLU(inplace=True),
-            nn.Linear(128, hparams['fd'], bias=True)
-        )
+        #self.reshape = torch.nn.Sequential(
+         #   nn.Linear(128, 128, bias=False),
+          #  nn.BatchNorm1d(128),
+           # nn.ReLU(inplace=True),
+            #nn.Linear(128, hparams['fd'], bias=True)
+        #)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -115,7 +115,7 @@ class MNIST_CNN(nn.Module):
         x = F.relu(x)
         x = self.bn3(x)
         x = x.mean(dim=(2,3))
-        x = self.reshape(x)
+        #x = self.reshape(x)
         return F.normalize(x)
 
 def Featurizer(input_shape, hparams):

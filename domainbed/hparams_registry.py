@@ -30,7 +30,7 @@ def _hparams(algorithm, dataset, random_state):
     hparams['fd'] = (128,0)
 
     if algorithm == 'MCR':
-        hparams['n_comp'] = (3,0)
+        hparams['n_comp'] = (3,3)
 
     if algorithm in ['DANN', 'CDANN']:
 
