@@ -10,6 +10,8 @@ import torch.nn.functional as F
 
 from domainbed import networks
 from domainbed.lib.misc import random_pairs_of_minibatches
+from mcr import MaximalCodingRateReduction
+from sklearn.decomposition import TruncatedSVD
 
 ALGORITHMS = [
     'ERM',
@@ -21,6 +23,7 @@ ALGORITHMS = [
     'MLDG',
     'MMD',
     'CORAL'
+    'MCR'
 ]
 
 def get_algorithm_class(algorithm_name):
@@ -82,6 +85,57 @@ class ERM(Algorithm):
     def predict(self, x):
         return self.network(x)
 
+class MCR(Algorithm):
+    """
+    Maximal Coding Rate Reduction (MCR)
+    """
+
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(MCR, self).__init__(input_shape, num_classes, num_domains,
+                                  hparams)
+        self.featurizer = networks.Featurizer(input_shape, self.hparams)
+        #self.classifier = nn.Linear(self.featurizer.n_outputs, num_classes)
+        #self.network = nn.Sequential(self.featurizer, self.classifier)
+        self.optimizer = torch.optim.Adam(
+            self.network.parameters(),
+            lr=self.hparams["lr"],
+            weight_decay=self.hparams['weight_decay']
+        )
+        self.num_classes = num_classes
+        self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).cuda()
+        self.components = {}
+
+    def update(self, minibatches):
+        all_x = torch.cat([x for x,y in minibatches])
+        all_y = torch.cat([y for x,y in minibatches])
+        loss, loss_empi, loss_theo = self.criterion(self.featurizer(all_x), all_y)
+        self.svd(all_x, all_y)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return {'loss': loss.item()}
+
+    def svd(self, x, y):
+        features_sort = [[] for _ in range(self.num_classes)]
+        for i, lbl in enumerate(y):
+            features_sort[lbl].append(data[i])
+        sorted_data = [np.stack(class_data) for class_data in sorted_data]
+
+        for j in range(self.num_classes):
+            svd = TruncatedSVD(n_components=self.hparams['n_comp']).fit(features_sort[j])
+            self.components[j] = svd.components_
+
+    def predict(self, x):
+        scores_svd = []
+        for j in range(self.num_classes):
+            svd_j = (np.eye(fd) - self.components[j].T @ self.components[j]) \
+                            @ (x.numpy()).T
+            score_svd_j = np.linalg.norm(svd_j, ord=2, axis=0)
+            scores_svd.append(score_svd_j)
+        return np.argmin(scores_svd, axis=0)
+
 
 class AbstractDANN(Algorithm):
     """Domain-Adversarial Neural Networks (abstract class)"""
@@ -106,14 +160,14 @@ class AbstractDANN(Algorithm):
 
         # Optimizers
         self.disc_opt = torch.optim.Adam(
-            (list(self.discriminator.parameters()) + 
+            (list(self.discriminator.parameters()) +
                 list(self.class_embeddings.parameters())),
             lr=self.hparams["lr_d"],
             weight_decay=self.hparams['weight_decay_d'],
             betas=(self.hparams['beta1'], 0.9))
 
         self.gen_opt = torch.optim.Adam(
-            (list(self.featurizer.parameters()) + 
+            (list(self.featurizer.parameters()) +
                 list(self.classifier.parameters())),
             lr=self.hparams["lr_g"],
             weight_decay=self.hparams['weight_decay_g'],
@@ -429,7 +483,7 @@ class AbstractMMD(ERM):
     def __init__(self, input_shape, num_classes, num_domains, hparams, gaussian):
         super(AbstractMMD, self).__init__(input_shape, num_classes, num_domains,
                                   hparams)
-        if gaussian: 
+        if gaussian:
             self.kernel_type = "gaussian"
         else:
             self.kernel_type = "mean_cov"
@@ -441,7 +495,7 @@ class AbstractMMD(ERM):
                           x1,
                           x2.transpose(-2, -1), alpha=-2).add_(x1_norm)
         return res.clamp_min_(1e-30)
-    
+
     def gaussian_kernel(self, x, y, gamma=[0.001, 0.01, 0.1, 1, 10, 100,
                                            1000]):
         D = self.my_cdist(x, y)
@@ -473,7 +527,7 @@ class AbstractMMD(ERM):
 
     def update(self, minibatches):
         objective = 0
-        penalty = 0 
+        penalty = 0
         nmb = len(minibatches)
 
         features = [self.featurizer(xi) for xi, _ in minibatches]
@@ -511,7 +565,7 @@ class MMD(AbstractMMD):
 
 class CORAL(AbstractMMD):
     """
-    MMD using mean and covariance difference 
+    MMD using mean and covariance difference
     """
 
     def __init__(self, input_shape, num_classes, num_domains, hparams):

@@ -80,7 +80,7 @@ class MNIST_CNN(nn.Module):
     """
     n_outputs = 128
 
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, hparams):
         super(MNIST_CNN, self).__init__()
         self.conv1 = nn.Conv2d(input_shape[0], 64, 3, 1, padding=1)
         self.conv2 = nn.Conv2d(64, 128, 3, stride=2, padding=1)
@@ -91,6 +91,12 @@ class MNIST_CNN(nn.Module):
         self.bn1 = nn.GroupNorm(8, 128)
         self.bn2 = nn.GroupNorm(8, 128)
         self.bn3 = nn.GroupNorm(8, 128)
+        self.reshape = torch.nn.Sequential(
+            nn.Linear(128, 128, bias=False),
+            nn.BatchNorm1d(128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, hparams['fd'], bias=True)
+        )
 
     def forward(self, x):
         x = self.conv1(x)
@@ -108,16 +114,16 @@ class MNIST_CNN(nn.Module):
         x = self.conv4(x)
         x = F.relu(x)
         x = self.bn3(x)
-
         x = x.mean(dim=(2,3))
-        return x
+        x = self.reshape(x)
+        return F.normalize(x)
 
 def Featurizer(input_shape, hparams):
     """Auto-select an appropriate featurizer for the given input shape."""
     if input_shape == (2048,):
         return MLP(2048, 128, hparams)
     elif input_shape[1:3] == (28, 28):
-        return MNIST_CNN(input_shape)
+        return MNIST_CNN(input_shape, hparams)
     elif input_shape == (3, 32, 32):
         return wide_resnet.Wide_ResNet(16, 2, 0.)
     elif input_shape == (3, 224, 224):
