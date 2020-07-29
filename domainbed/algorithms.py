@@ -107,8 +107,9 @@ class MCR(Algorithm):
     def update(self, minibatches):
         all_x = torch.cat([x for x,y in minibatches])
         all_y = torch.cat([y for x,y in minibatches])
-        loss, loss_empi, loss_theo = self.criterion(self.featurizer(all_x), all_y)
-        self.svd(all_x, all_y)
+        p = self.featurizer(all_x)
+        loss, loss_empi, loss_theo = self.criterion(p, all_y)
+        self.svd(p, all_y)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -127,6 +128,7 @@ class MCR(Algorithm):
             self.components[j] = vt
 
     def predict(self, x):
+        x = self.featurizer(x)
         scores_svd = []
         for j in range(self.num_classes):
             svd_j = torch.matmul((np.eye(self.hparams['fd']) - torch.matmul(self.components[j].t(),self.components[j])),x.t())
