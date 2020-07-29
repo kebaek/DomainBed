@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from domainbed import networks
 from domainbed.lib.misc import random_pairs_of_minibatches
-from mcr import MaximalCodingRateReduction
+from domainbed.mcr import MaximalCodingRateReduction
 from sklearn.decomposition import TruncatedSVD
 
 ALGORITHMS = [
