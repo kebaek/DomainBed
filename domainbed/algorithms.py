@@ -94,8 +94,7 @@ class MCR(Algorithm):
         super(MCR, self).__init__(input_shape, num_classes, num_domains,
                                   hparams)
         self.featurizer = networks.Featurizer(input_shape, self.hparams)
-        #self.classifier = nn.Linear(self.featurizer.n_outputs, num_classes)
-        #self.network = nn.Sequential(self.featurizer, self.classifier)
+        self.network = self.featurizer
         self.optimizer = torch.optim.Adam(
             self.network.parameters(),
             lr=self.hparams["lr"],
