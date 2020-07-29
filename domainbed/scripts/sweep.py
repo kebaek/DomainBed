@@ -119,13 +119,17 @@ def all_test_env_combinations(n):
             yield [i, j]
 
 def make_args_list(n_trials, dataset_names, algorithms, n_hparams, steps,
-    data_dir, hparams):
+    data_dir, hparams, n_envs):
     args_list = []
     for trial_seed in range(n_trials):
         for dataset in dataset_names:
             for algorithm in algorithms:
-                all_test_envs = all_test_env_combinations(
-                    datasets.NUM_ENVIRONMENTS[dataset])
+                if n_envs < 0:
+                    all_test_envs = all_test_env_combinations(
+                        datasets.NUM_ENVIRONMENTS[dataset])
+                else:
+                    all_test_envs = all_test_env_combinations(
+                        n_envs)
                 for test_envs in all_test_envs:
                     for hparams_seed in range(n_hparams):
                         train_args = {}
@@ -164,6 +168,7 @@ if __name__ == "__main__":
     parser.add_argument('--steps', type=int, default=None)
     parser.add_argument('--hparams', type=str, default=None)
     parser.add_argument('--skip_confirmation', action='store_true')
+    parser.add_argument('--n_envs', type=int, default=-1)
     args = parser.parse_args()
 
     args_list = make_args_list(
@@ -173,7 +178,8 @@ if __name__ == "__main__":
         n_hparams=args.n_hparams,
         steps=args.steps,
         data_dir=args.data_dir,
-        hparams=args.hparams
+        hparams=args.hparams,
+        n_envs=args.n_envs
     )
 
     jobs = [Job(train_args, args.output_dir) for train_args in args_list]
