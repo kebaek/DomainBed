@@ -70,7 +70,6 @@ class ERM(Algorithm):
             lr=self.hparams["lr"],
             weight_decay=self.hparams['weight_decay']
         )
-        print(self.featurizer.n_outputs)
 
     def update(self, minibatches):
         all_x = torch.cat([x for x,y in minibatches])

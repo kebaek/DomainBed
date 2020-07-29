@@ -27,7 +27,7 @@ class MaximalCodingRateReduction(torch.nn.Module):
             trPi = torch.trace(Pi[j]) + 1e-8
             scalar = p / (trPi * self.eps)
             log_det = torch.logdet(I + scalar * W.matmul(Pi[j]).matmul(W.T))
-            compress_loss += log_det * trPi / m
+            compress_loss += log_det * trPi / float(m)
         return compress_loss / 2.
 
     def compute_discrimn_loss_theoretical(self, W):
@@ -48,7 +48,7 @@ class MaximalCodingRateReduction(torch.nn.Module):
             trPi = torch.trace(Pi[j]) + 1e-8
             scalar = p / (trPi * self.eps)
             log_det = torch.logdet(I + scalar * W.matmul(Pi[j]).matmul(W.T))
-            compress_loss += trPi / (2 * m) * log_det
+            compress_loss += trPi / (2. * m) * log_det
         return compress_loss
 
     def forward(self, X, Y, num_classes=None):
