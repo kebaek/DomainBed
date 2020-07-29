@@ -27,10 +27,10 @@ def _hparams(algorithm, dataset, random_state):
 
     hparams['class_balanced'] = (False, False)
 
-    hparams['fd'] = 128
+    hparams['fd'] = (128,0)
 
     if algorithm == 'MCR':
-        hparams['n_comp'] = 3
+        hparams['n_comp'] = (3,0)
 
     if algorithm in ['DANN', 'CDANN']:
 
