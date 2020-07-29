@@ -120,17 +120,16 @@ class MCR(Algorithm):
         sorted_data = [[] for _ in range(self.num_classes)]
         for i, lbl in enumerate(y):
             sorted_data[lbl].append(x[i])
-        sorted_data = [np.stack(class_data) for class_data in sorted_data]
+        sorted_data = [torch.stack(class_data) for class_data in sorted_data]
 
         for j in range(self.num_classes):
-            svd = TruncatedSVD(n_components=self.hparams['n_comp']).fit(sorted_data[j])
-            self.components[j] = svd.components_
+            u,s,vt = torch.svd(sorted_data[j])
+            self.components[j] = vt
 
     def predict(self, x):
         scores_svd = []
         for j in range(self.num_classes):
-            svd_j = (np.eye(fd) - self.components[j].T @ self.components[j]) \
-                            @ (x.numpy()).T
+            svd_j = torch.matmul((np.eye(self.hparams['fd']) - torch.matmul(self.components[j].t(),self.components[j])),x.t())
             score_svd_j = np.linalg.norm(svd_j, ord=2, axis=0)
             scores_svd.append(score_svd_j)
         return np.argmin(scores_svd, axis=0)
