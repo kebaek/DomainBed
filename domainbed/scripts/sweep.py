@@ -118,6 +118,10 @@ def all_test_env_combinations(n):
         for j in range(i+1, n):
             yield [i, j]
 
+def single_test_env(n):
+    for i in range(n):
+        yield [i]
+
 def make_args_list(n_trials, dataset_names, algorithms, n_hparams, steps,
     data_dir, hparams, n_envs):
     args_list = []
@@ -125,11 +129,10 @@ def make_args_list(n_trials, dataset_names, algorithms, n_hparams, steps,
         for dataset in dataset_names:
             for algorithm in algorithms:
                 if n_envs < 0:
-                    all_test_envs = all_test_env_combinations(
-                        datasets.NUM_ENVIRONMENTS[dataset])
+                    all_test_envs = single_test_env(datasets.NUM_ENVIRONMENTS[dataset])
                 else:
                     all_test_envs = all_test_env_combinations(
-                        n_envs)
+                        datasets.NUM_ENVIRONMENTS[dataset])
                 for test_envs in all_test_envs:
                     for hparams_seed in range(n_hparams):
                         train_args = {}
