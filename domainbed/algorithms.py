@@ -117,13 +117,13 @@ class MCR(Algorithm):
         return {'loss': loss.item()}
 
     def svd(self, x, y):
-        features_sort = [[] for _ in range(self.num_classes)]
+        sorted_data = [[] for _ in range(self.num_classes)]
         for i, lbl in enumerate(y):
-            features_sort[lbl].append(data[i])
+            sorted_data[lbl].append(x[i])
         sorted_data = [np.stack(class_data) for class_data in sorted_data]
 
         for j in range(self.num_classes):
-            svd = TruncatedSVD(n_components=self.hparams['n_comp']).fit(features_sort[j])
+            svd = TruncatedSVD(n_components=self.hparams['n_comp']).fit(sorted_data[j])
             self.components[j] = svd.components_
 
     def predict(self, x):
