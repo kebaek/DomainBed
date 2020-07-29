@@ -85,3 +85,7 @@ def label_to_membership(targets, num_classes=None):
         k = np.argmax(targets[j])
         Pi[k, j, j] = 1.
     return Pi
+
+def one_hot(x, K):
+    """Turn labels x into one hot vector of K classes. """
+    return np.array(x[:, None] == np.arange(K)[None, :], dtype=int)
