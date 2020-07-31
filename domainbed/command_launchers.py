@@ -19,9 +19,19 @@ def dummy_launcher(commands):
     for cmd in commands:
         print(f'Dummy launcher: {cmd}')
 
+def parallel_launcher(commands):
+    child_processes = []
+    for cmd in commands:
+        p = subprocess.Popen(cmd, shell=True)
+        child_processes.append(p)
+
+    for cp in child_processes:
+        cp.wait()
+
 REGISTRY = {
     'local': local_launcher,
-    'dummy': dummy_launcher
+    'dummy': dummy_launcher,
+    'parallel': parallel_launcher
 }
 
 try:

@@ -114,7 +114,7 @@ def print_results_tables(records, selection_method, latex):
                 table[i][j] = format_mean(trial_accs, latex)
 
         col_labels = [
-            'Algorithm', 
+            'Algorithm',
             *datasets.get_dataset_class(dataset).ENVIRONMENT_NAMES
         ]
         header_text = (f'Dataset: {dataset}, '
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     records = load_records(args.input_dir)
-   
+
     if args.latex:
         print("\\documentclass{article}")
         print("\\usepackage{booktabs}")

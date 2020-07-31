@@ -13,13 +13,15 @@ def _hparams(algorithm, dataset, random_state):
 
     hparams = {}
 
+    fd = int(random_state.uniform(2, 8))
+    hparams['fd'] = (60,fd*10)
     if dataset in RESNET_DATASETS:
         hparams['lr'] = (5e-5, 10**random_state.uniform(-5, -3.5))
         hparams['batch_size'] = (128, int(2**random_state.uniform(3, 5.5)))
     else:
         hparams['lr'] = (1e-3, 10**random_state.uniform(-4.5, -2.5))
         #hparams['batch_size'] = (128, int(2**random_state.uniform(3, 9)))
-        hparams['batch_size'] = (512, 512)
+        hparams['batch_size'] = (512, fd * int(random_state.uniform(3, 9)))
     if dataset in ['ColoredMNIST', 'RotatedMNIST']:
         hparams['weight_decay'] = (0., 0.)
     else:
@@ -27,10 +29,8 @@ def _hparams(algorithm, dataset, random_state):
 
     hparams['class_balanced'] = (False, False)
 
-    hparams['fd'] = (60,60)
-
     if algorithm == 'MCR':
-        hparams['n_comp'] = (6,6)
+        hparams['n_comp'] = (6,fd)
 
     if algorithm in ['DANN', 'CDANN']:
 
