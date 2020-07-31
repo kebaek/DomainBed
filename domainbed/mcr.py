@@ -60,13 +60,13 @@ class MaximalCodingRateReduction(torch.nn.Module):
 
         discrimn_loss_empi = self.compute_discrimn_loss_empirical(W)
         compress_loss_empi = self.compute_compress_loss_empirical(W, Pi)
-        discrimn_loss_theo = self.compute_discrimn_loss_theoretical(W)
-        compress_loss_theo = self.compute_compress_loss_theoretical(W, Pi)
+        #discrimn_loss_theo = self.compute_discrimn_loss_theoretical(W)
+        #compress_loss_theo = self.compute_compress_loss_theoretical(W, Pi)
 
         total_loss_empi = (self.gam2 * -discrimn_loss_empi + compress_loss_empi)
-        return (total_loss_empi,
-                [discrimn_loss_empi.item(), compress_loss_empi.item()],
-                [discrimn_loss_theo.item(), compress_loss_theo.item()])
+        return (total_loss_empi,0,0)
+          #      [discrimn_loss_empi.item(), compress_loss_empi.item()],
+           #     [discrimn_loss_theo.item(), compress_loss_theo.item()])
 
 def label_to_membership(targets, num_classes=None):
     """Generate a true membership matrix, and assign value to current Pi.
