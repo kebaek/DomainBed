@@ -128,7 +128,7 @@ if __name__ == "__main__":
     if algorithm_dict is not None:
         algorithm.load_state_dict(algorithm_dict)
 
-    algorithm.to(device)
+    algorithm = algorithm.to(device)
 
     train_minibatches_iterator = zip(*train_loaders)
     checkpoint_vals = collections.defaultdict(lambda: [])

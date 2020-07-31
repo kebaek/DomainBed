@@ -93,7 +93,7 @@ class MCR(Algorithm):
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         super(MCR, self).__init__(input_shape, num_classes, num_domains,
                                   hparams)
-        self.featurizer = networks.Featurizer(input_shape, self.hparams)
+        self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams)).cuda()
         self.network = self.featurizer
         self.optimizer = torch.optim.Adam(
             self.network.parameters(),
