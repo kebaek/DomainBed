@@ -143,10 +143,8 @@ def print_results_tables(records, selection_method, latex):
 
 def load_records(path):
     records = []
-    for i, subdir in tqdm.tqdm(list(enumerate(os.listdir(path))),
-                               ncols=80,
-                               leave=False):
-        results_path = os.path.join(path, subdir, 'results.jsonl')
+    for root, dirs, files in os.walk(path, topdown=True):
+        results_path = os.path.join(root, 'results.jsonl')
         try:
             with open(results_path, 'r') as f:
                 for line in f:
