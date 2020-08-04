@@ -129,3 +129,33 @@ env0_in_acc   env0_out_acc  env1_in_acc   env1_out_acc  env2_in_acc   env2_out_a
 0.9997857296  0.9798542649  0.9863938290  0.9854264895  0.9998928648  0.9918559794  1.0000000000  0.9901414488  0.9989285332  0.9854264895  0.9978570663  0.9841405915  9700.0000000  -23.57965093  9700          0.7833524990 
 0.9997857296  0.9819974282  0.9872509106  0.9854264895  0.9998928648  0.9897128161  1.0000000000  0.9905700814  0.9990356798  0.9867123875  0.9984999464  0.9841405915  9800.0000000  -23.58995286  9800          0.7812867093 
 0.9996785944  0.9828546935  0.9870366402  0.9854264895  0.9998928648  0.9922846121  1.0000000000  0.9905700814  0.9990356798  0.9854264895  0.9984999464  0.9862837548  9900.0000000  -23.58321084  9900          0.7822519660 
+Args:
+	algorithm: MCR
+	checkpoint_freq: None
+	data_dir: data
+	dataset: RotatedMNIST
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/512_1
+	seed: 0
+	steps: None
+	test_envs: [1]
+	trial_seed: 0
+HParams:
+	batch_size: 512
+	class_balanced: False
+	fd: 30
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 0.001
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 3
+	resnet_dropout: 0.0
+	weight_decay: 0.0
