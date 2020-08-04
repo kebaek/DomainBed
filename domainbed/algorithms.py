@@ -12,6 +12,7 @@ from domainbed import networks
 from domainbed.lib.misc import random_pairs_of_minibatches
 from domainbed.mcr import MaximalCodingRateReduction
 from sklearn.decomposition import TruncatedSVD
+from sklearn.svm import LinearSVC
 
 ALGORITHMS = [
     'ERM',
@@ -100,6 +101,7 @@ class MCR(Algorithm):
             lr=self.hparams["lr"],
             weight_decay=self.hparams['weight_decay']
         )
+        self.classification = hparams['classification']
         self.num_classes = num_classes
         self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).cuda()
         self.components = {}
@@ -109,7 +111,10 @@ class MCR(Algorithm):
         all_y = torch.cat([y for x,y in minibatches])
         p = self.featurizer(all_x)
         loss, loss_empi, loss_theo = self.criterion(p, all_y)
-        self.svd(p, all_y)
+        if self.classification == 'svm':
+            self.svm(p, all_y)
+        else:
+            self.svd(p, all_y)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -127,14 +132,21 @@ class MCR(Algorithm):
             u,s,vt = torch.svd(sorted_data[j])
             self.components[j] = vt.t()[:self.hparams['n_comp']]
 
+    def svm(self,x,y):
+        self.components = LinearSVC(verbose=0, random_state=10)
+        self.components.fit(train_features, train_labels)
+
     def predict(self, x):
         x = self.featurizer(x)
         scores_svd = []
-        for j in range(self.num_classes):
-            svd_j = torch.matmul(torch.eye(self.hparams['fd']).cuda() - torch.matmul(self.components[j].t(),self.components[j]),x.t())
-            score_svd_j = torch.norm(svd_j, dim=0)
-            scores_svd.append(score_svd_j)
-        p = torch.argmin(torch.stack(scores_svd), dim=0)
+        if self.classification = 'svm':
+            p = self.components.predict(x)
+        else:
+            for j in range(self.num_classes):
+                svd_j = torch.matmul(torch.eye(self.hparams['fd']).cuda() - torch.matmul(self.components[j].t(),self.components[j]),x.t())
+                score_svd_j = torch.norm(svd_j, dim=0)
+                scores_svd.append(score_svd_j)
+            p = torch.argmin(torch.stack(scores_svd), dim=0)
         return F.one_hot(p, self.num_classes)
 
 
