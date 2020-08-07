@@ -134,13 +134,14 @@ class MCR(Algorithm):
 
 	def svm(self,x,y):
 		self.components = LinearSVC(verbose=0, random_state=10)
-		self.components.fit(train_features, train_labels)
+		self.components.fit(x.cpu().detach().numpy(),y.cpu().detach().numpy())
 
 	def predict(self, x):
 		x = self.featurizer(x)
 		scores_svd = []
 		if self.classification == 'svm':
-			p = self.components.predict(x)
+			p = self.components.predict(x.cpu().detach().numpy())
+			p = torch.from_numpy(p).cuda()
 		else:
 			for j in range(self.num_classes):
 				svd_j = torch.matmul(torch.eye(self.hparams['fd']).cuda() - torch.matmul(self.components[j].t(),self.components[j]),x.t())
