@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     algorithm_class = algorithms.get_algorithm_class(args.algorithm)
     algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
-        len(dataset) - len(args.test_envs), hparams)
+        len(dataset) - len(args.test_envs), hparams, args)
 
     if algorithm_dict is not None:
         algorithm.load_state_dict(algorithm_dict)
@@ -135,20 +135,25 @@ if __name__ == "__main__":
 
     steps_per_epoch = min([l.underlying_length for l in train_loaders])
     n_steps = args.steps or dataset.N_STEPS
-    checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
+    args.checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
+
 
     last_results_keys = None
+    max = 0
     for step in range(start_step, n_steps):
         step_start_time = time.time()
         minibatches_device = [(x.to(device), y.to(device))
             for x,y in next(train_minibatches_iterator)]
-        step_vals = algorithm.update(minibatches_device)
+        if step % args.checkpoint_freq == 0 and args.algorithm == 'MCR':
+            step_vals = algorithm.update(minibatches_device, components=True)
+        else:
+            step_vals = algorithm.update(minibatches_device)
         checkpoint_vals['step_time'].append(time.time() - step_start_time)
 
         for key, val in step_vals.items():
             checkpoint_vals[key].append(val)
 
-        if step % checkpoint_freq == 0:
+        if step % args.checkpoint_freq == 0:
             results = {
                 'step': step,
                 'epoch': step / steps_per_epoch,
@@ -161,6 +166,11 @@ if __name__ == "__main__":
             for name, loader, weights in evals:
                 acc = misc.accuracy(algorithm, loader, weights, device)
                 results[name+'_acc'] = acc
+            current_val = np.average([results['env{}_out_acc'.format(i)] for i in range(len(in_splits)) if i not in args.test_envs])
+            if max < current_val:
+                max = current_val
+                torch.save(algorithm.state_dict(),
+                           os.path.join(args.output_dir, "G.pth.tar")
 
             results_keys = sorted(results.keys())
             if results_keys != last_results_keys:

@@ -106,14 +106,14 @@ class MCR(Algorithm):
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).cuda()
 		self.components = {}
 
-	def update(self, minibatches):
+	def update(self, minibatches, components=False):
 		all_x = torch.cat([x for x,y in minibatches])
 		all_y = torch.cat([y for x,y in minibatches])
 		p = self.featurizer(all_x)
 		loss, loss_empi, loss_theo = self.criterion(p, all_y)
-		if self.classification == 'svm':
+		if components and self.classification == 'svm':
 			self.svm(p, all_y)
-		else:
+		elif components:
 			self.svd(p, all_y)
 
 		self.optimizer.zero_grad()
