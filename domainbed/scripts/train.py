@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
 	train_minibatches_iterator = zip(*train_loaders)
 	checkpoint_vals = collections.defaultdict(lambda: [])
-
+    all_data = np.concatenate(list(train_minibatches_iterator),axis=0)
 	steps_per_epoch = min([l.underlying_length for l in train_loaders])
 	n_steps = args.steps or dataset.N_STEPS
 	args.checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
@@ -144,10 +144,9 @@ if __name__ == "__main__":
 		step_start_time = time.time()
 		minibatches_device = [(x.to(device), y.to(device))
 			for x,y in next(train_minibatches_iterator)]
+        step_vals = algorithm.update(minibatches_device)
 		if step % args.checkpoint_freq == 0 and args.algorithm == 'MCR':
-			step_vals = algorithm.update(minibatches_device, components=True)
-		else:
-			step_vals = algorithm.update(minibatches_device)
+			step_vals = algorithm.update(all_data, components=True)
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)
 
 		for key, val in step_vals.items():
@@ -167,7 +166,7 @@ if __name__ == "__main__":
 				acc = misc.accuracy(algorithm, loader, weights, device)
 				results[name+'_acc'] = acc
 			current_val = np.average([results['env{}_out_acc'.format(i)] for i in range(len(in_splits)) if i not in args.test_envs])
-			if m < current_val:
+			if m <= current_val:
 				m = current_val
 				print('saved at step %d'%(step))
 				torch.save(algorithm.state_dict(),
