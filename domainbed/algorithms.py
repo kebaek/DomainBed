@@ -27,6 +27,11 @@ ALGORITHMS = [
 	'MCR'
 ]
 
+if torch.cuda.is_available():
+    device = "cuda"
+else:
+    device = "cpu"
+
 def get_algorithm_class(algorithm_name):
 	"""Return the algorithm class with the given name."""
 	if algorithm_name not in globals():
@@ -64,7 +69,7 @@ class ERM(Algorithm):
 		super(ERM, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 		self.featurizer = networks.Featurizer(input_shape, self.hparams)
-		self.classifier = nn.Linear(self.featurizer.n_outputs, num_classes)
+		self.classifier = nn.Linear(hparams['fd'], num_classes)
 		self.network = nn.Sequential(self.featurizer, self.classifier)
 		self.optimizer = torch.optim.Adam(
 			self.network.parameters(),
@@ -94,7 +99,7 @@ class MCR(Algorithm):
 	def __init__(self, input_shape, num_classes, num_domains, hparams):
 		super(MCR, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
-		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams)).cuda()
+		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
 		self.network = self.featurizer
 		self.optimizer = torch.optim.Adam(
 			self.network.parameters(),
@@ -103,30 +108,33 @@ class MCR(Algorithm):
 		)
 		self.classification = hparams['classification']
 		self.num_classes = num_classes
-		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).cuda()
+		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 
 	def update(self, minibatches, components=False):
-		all_x = torch.cat([x for x,y in minibatches])
-		all_y = torch.cat([y for x,y in minibatches])
-		p = self.featurizer(all_x)
-		loss, loss_empi, loss_theo = self.criterion(p, all_y)
-		if components and self.classification == 'svm':
-			self.svm(p, all_y)
-		elif components:
-			self.svd(p, all_y)
+        if components:
+            p = torch.cat([self.featurizer(x.cuda()).cpu().detach() for x,y in minibatches])
+            all_y = torch.cat([y for x,y in minibatches])
+            if self.classification == 'svm':
+    			self.svm(p, all_y)
+    		else:
+    			self.svd(p, all_y)
+        else:
+            p = self.featurizer(torch.cat([x for x,y in minibatches]))
+            all_y = torch.cat([y for x,y in minibatches])
+    		loss, loss_empi, loss_theo = self.criterion(p, all_y)
 
-		self.optimizer.zero_grad()
-		loss.backward()
-		self.optimizer.step()
+    		self.optimizer.zero_grad()
+    		loss.backward()
+    		self.optimizer.step()
 
-		return {'loss': loss.item()}
+    		return {'loss': loss.item()}
 
 	def svd(self, x, y):
 		sorted_data = [[] for _ in range(self.num_classes)]
 		for i, lbl in enumerate(y):
 			sorted_data[lbl].append(x[i])
-		sorted_data = [torch.stack(class_data) for class_data in sorted_data]
+		sorted_data = [torch.stack(class_data.cpu() for class_data in sorted_data]
 
 		for j in range(self.num_classes):
 			u,s,vt = torch.svd(sorted_data[j])
@@ -141,10 +149,10 @@ class MCR(Algorithm):
 		scores_svd = []
 		if self.classification == 'svm':
 			p = self.components.predict(x.cpu().detach().numpy())
-			p = torch.from_numpy(p).cuda()
+			p = torch.from_numpy(p).to(device)
 		else:
 			for j in range(self.num_classes):
-				svd_j = torch.matmul(torch.eye(self.hparams['fd']).cuda() - torch.matmul(self.components[j].t(),self.components[j]),x.t())
+				svd_j = torch.matmul(torch.eye(self.hparams['fd']).to(device) - torch.matmul(self.components[j].t(),self.components[j]),x.t())
 				score_svd_j = torch.norm(svd_j, dim=0)
 				scores_svd.append(score_svd_j)
 			p = torch.argmin(torch.stack(scores_svd), dim=0)
