@@ -76,17 +76,45 @@ class ERM(Algorithm):
             lr=self.hparams["lr"],
             weight_decay=self.hparams['weight_decay']
         )
+        self.classification = hparams['classification']
+        self.num_classes = num_classes
+        self.components = {}
+        self.singular_values = {}
 
-    def update(self, minibatches):
-        all_x = torch.cat([x for x,y in minibatches])
-        all_y = torch.cat([y for x,y in minibatches])
-        loss = F.cross_entropy(self.predict(all_x), all_y)
+    def update(self, minibatches, components=False):
+        if components:
+            p = []
+            all_y = []
+            for x,y in minibatches:
+                p.append(self.featurizer(x.cuda()).cpu().detach())
+                all_y.append(y)
+            p, all_y = torch.cat(p), torch.cat(all_y)
+            if self.classification == 'svm':
+                self.svm(p, all_y)
+            else:
+                self.svd(p, all_y)
+            return None
+        else:
+            all_x = torch.cat([x for x,y in minibatches])
+            all_y = torch.cat([y for x,y in minibatches])
+            loss = F.cross_entropy(self.predict(all_x), all_y)
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
 
-        return {'loss': loss.item()}
+            return {'loss': loss.item()}
+
+    def svd(self, x, y):
+        sorted_data = [[] for _ in range(self.num_classes)]
+        for i, lbl in enumerate(y):
+            sorted_data[lbl].append(x[i])
+        sorted_data = [torch.stack(class_data).cpu() for class_data in sorted_data]
+
+        for j in range(self.num_classes):
+            u,s,vt = torch.svd(sorted_data[j])
+            self.components[j] = vt.t()[:self.hparams['n_comp']]
+            self.singular_values[j] = s[:self.hparams['n_comp']]
 
     def predict(self, x):
         return self.network(x)
