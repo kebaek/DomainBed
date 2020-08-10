@@ -31,9 +31,8 @@ def _hparams(algorithm, dataset, random_state):
 
 	hparams['class_balanced'] = (False, False)
 
-	if algorithm == 'MCR':
-		hparams['n_comp'] = (6,6)
-		hparams['classification']=('svd','svd')
+	hparams['n_comp'] = (6,6)
+	hparams['classification']=('svd','svd')
 
 	if algorithm in ['DANN', 'CDANN']:
 
