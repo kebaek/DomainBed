@@ -146,7 +146,7 @@ if __name__ == "__main__":
 			for x,y in next(train_minibatches_iterator)]
 		step_vals = algorithm.update(minibatches_device)
 		if step % args.checkpoint_freq == 0 and args.algorithm == 'MCR':
-			all_data = chain(*train_loaders[:len(in_splits)])
+			all_data = chain(*eval_loaders[:len(in_splits)])
 			algorithm.update(all_data, components=True)
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)
 
