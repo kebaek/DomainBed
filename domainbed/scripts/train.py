@@ -136,6 +136,7 @@ if __name__ == "__main__":
 	steps_per_epoch = min([l.underlying_length for l in train_loaders])
 	n_steps = args.steps or dataset.N_STEPS
 	args.checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
+    all_data = np.concatenate(list(zip(*eval_loader[:len(in_splits)])), axis=0)
 
 
 	last_results_keys = None
@@ -146,7 +147,6 @@ if __name__ == "__main__":
 			for x,y in next(train_minibatches_iterator)]
 		step_vals = algorithm.update(minibatches_device)
 		if step % args.checkpoint_freq == 0 and args.algorithm == 'MCR':
-			all_data = chain(*eval_loaders[:len(in_splits)])
 			algorithm.update(all_data, components=True)
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)
 
