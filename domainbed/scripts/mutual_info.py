@@ -43,6 +43,23 @@ def sorted_features(model,class_loader):
 	return c
 
 def mutual_information(model, class1, class2):
+	c1 = torch.cat([model.featurizer(x.cuda()).cpu().detach() for x,y in class1])
+	c2 = torch.cat([model.featurizer(x.cuda()).cpu().detach() for x,y in class2])
+	z = torch.cat((c1,c2), 0)
+	m,p = z.shape
+	m1, _ = c1.shape
+	m2, _ = c2.shape
+	I = torch.eye(p).cpu()
+	scalar = p / (m * 0.5)
+	scalar1 = p / (m1 * 0.5)
+	scalar2 = p / (m2 * 0.5)
+	ld = torch.logdet(I + scalar * (z.T).matmul(z)) / 2.
+	ld1 = torch.logdet(I + scalar1 * (c1.T).matmul(c1)) / (2. * m1)
+	ld2 = torch.logdet(I + scalar2 * (c2.T).matmul(c2)) / (2. * m2)
+
+	return ld - ld1 - ld2
+
+def mutual_information_per_class(model, class1, class2):
 	c1 = sorted_features(model,class1)
 	c2 = sorted_features(model,class2)
 	mi = []
@@ -180,6 +197,12 @@ if __name__ == "__main__":
 		print('Values: {0}, Mean: {1}'.format(algorithm.singular_values[i],torch.mean(algorithm.singular_values[i])))
 
 	print('Mutual Information')
+	for i in range(len(dataset)):
+		for j in range(i,len(dataset)):
+			d = mutual_information(algorithm,eval_loaders[i], eval_loaders[j])
+			print('(%d, %d): %f'%(i,j,d))
+
+	print('Mutual Information per Class')
 	for i in range(len(dataset)):
 		for j in range(i,len(dataset)):
 			d = mutual_information(algorithm,eval_loaders[i], eval_loaders[j])
