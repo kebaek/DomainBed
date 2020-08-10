@@ -19,6 +19,23 @@ from domainbed import algorithms
 from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 
+def mutual_information(model, class1, class2):
+    c1 = torch.cat([model.featurizer(x.cuda()) for x,y in class1])
+    c2 = torch.cat([model.featurizer(x.cuda()) for x,y in class2])
+    z = torch.cat((c1,c2), 0)
+    m,d = z.shape
+    m1, _ = c1.shape
+    m2, _ = c2.shape
+    I = torch.eye(p).cuda()
+    scalar = p / (m * 0.5)
+    scalar1 = p / (m1 * 0.5)
+    scalar2 = p / (m2 * 0.5)
+    ld = torch.logdet(I + scalar * (z.T).matmul(z)) / 2.
+    ld1 = torch.logdet(I + scalar1 * (c1.T).matmul(c1)) / (2. * m1)
+    ld2 = torch.logdet(I + scalar2 * (c2.T).matmul(c2)) / (2. * m2)
+
+    return ld - ld1 - ld2
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Domain generalization')
 	parser.add_argument('--data_dir', type=str)
@@ -38,7 +55,7 @@ if __name__ == "__main__":
 	parser.add_argument('--checkpoint_freq', type=int, default=None,
 		help='Checkpoint every N steps. Default is dataset-dependent.')
 	parser.add_argument('--test_envs', type=int, nargs='+', default=[0])
-	parser.add_argument('--file', type=str, default="G.pth.tar")
+	parser.add_argument('--folder', type=str, default="G.pth.tar")
 	parser.add_argument('--holdout_fraction', type=float, default=0.2)
 	args = parser.parse_args()
 
@@ -122,15 +139,11 @@ if __name__ == "__main__":
 	algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
 		len(dataset) - len(args.test_envs), hparams)
 
-	algorithm.load_state_dict(torch.load(args.file))
+	algorithm.load_state_dict(torch.load(args.folder, 'G.pth.tar'))
 	algorithm = algorithm.to(device)
     algorithm.eval()
-    all_data = chain(*train_loaders)
+    all_data = chain(*eval_loaders[:len(in_splits)])
     algorithm.update(all_data, components=True)
-
-	train_minibatches_iterator = zip(*train_loaders)
-    minibatches_device = [(x.to(device), y.to(device))
-        for x,y in next(train_minibatches_iterator)]
 
     print('SVD Accuracy')
     evals = zip(eval_loader_names, eval_loaders, eval_weights)
@@ -141,4 +154,16 @@ if __name__ == "__main__":
     misc.print_row(results_keys, colwidth=12)
     misc.print_row([results[key] for key in results_keys], colwidth=12)
 
-    print('SVD')
+    np.save(args.folder+'/components.npy', algorithm.components)
+    np.save(args.folder+'/singular.npy', algorithm.singular_values)
+
+    print('SVD Singular Values')
+    for i in range(dataset.num_classes):
+        print('Class %d' %(i))
+        print('Values: {0}, Mean: {1}'.format(self.singular_values[i],np.mean(self.singular_values[i])))
+
+    print('Mutual Information')
+    for i in range(dataset.num_classes):
+        for j in range(i,dataset.num_classes):
+            d = mutual_information(algorithm,eval_loaders[i], eval_loaders[j])
+            print('(%d, %d): %f'%(i,j,d))

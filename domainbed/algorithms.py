@@ -110,6 +110,7 @@ class MCR(Algorithm):
         self.num_classes = num_classes
         self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
         self.components = {}
+        self.singular_values = {}
 
     def update(self, minibatches, components=False):
         if components:
@@ -144,6 +145,7 @@ class MCR(Algorithm):
         for j in range(self.num_classes):
             u,s,vt = torch.svd(sorted_data[j])
             self.components[j] = vt.t()[:self.hparams['n_comp']]
+            self.singular_values[j] = s[:self.hparams['n_comp']]
 
     def svm(self,x,y):
         self.components = LinearSVC(verbose=0, random_state=10)
