@@ -136,7 +136,7 @@ if __name__ == "__main__":
 	steps_per_epoch = min([l.underlying_length for l in train_loaders])
 	n_steps = args.steps or dataset.N_STEPS
 	args.checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
-    all_data = np.concatenate(list(zip(*eval_loader[:len(in_splits)])), axis=0)
+    all_data = np.concatenate(list(zip(*eval_loaders[:len(in_splits)])), axis=0)
 
 
 	last_results_keys = None
