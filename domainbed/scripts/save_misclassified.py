@@ -141,5 +141,6 @@ if __name__ == "__main__":
 	print('SVD Accuracy')
 	evals = zip(eval_loader_names, eval_loaders, eval_weights)
 	results = {}
-	acc = misc.inaccurate_features(algorithm, eval_loaders[arg.test_envs], eval_weights[arg.test_envs], device)
-	np.save(args.folder+'/incorrect.npy', acc)
+	acc = misc.inaccurate_features(algorithm, eval_loaders[args.test_envs[0]], eval_weights[args.test_envs[0]], device)
+	np.save(args.folder+'/incorrect_features.npy', acc[0])
+	np.save(args.folder+'/incorrect_labels.npy', acc[1])

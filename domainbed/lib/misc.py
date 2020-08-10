@@ -136,6 +136,7 @@ def inaccurate_features(network, loader, weights, device):
     correct = 0
     total = 0
     features = []
+    labels = []
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
@@ -148,15 +149,16 @@ def inaccurate_features(network, loader, weights, device):
                 weights_offset += len(x)
             batch_weights = batch_weights.cuda()
             if p.size(1) == 1:
-                incorrect = np.invert(p.gt(0).eq(y))
+                incorrect = np.invert((p.gt(0).eq(y)).cpu().detach().numpy())
                 correct += (p.gt(0).eq(y).float() * batch_weights).sum().item()
             else:
-                incorrect = np.invert(p.argmax(1).eq(y))
+                incorrect = np.invert((p.argmax(1).eq(y)).cpu().detach().numpy())
                 correct += (p.argmax(1).eq(y).float() * batch_weights).sum().item()
-            features.append(x[incorrect])
+            features.append(x[incorrect].cpu().detach().numpy())
+            labels.append(y[incorrect].cpu().detach().numpy())
             total += batch_weights.sum().item()
     print(correct / total)
-    return np.array(features)
+    return np.array(features), np.array(labels)
 
 class Tee:
     def __init__(self, fname, mode="a"):
