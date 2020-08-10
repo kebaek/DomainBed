@@ -136,8 +136,7 @@ if __name__ == "__main__":
 	steps_per_epoch = min([l.underlying_length for l in train_loaders])
 	n_steps = args.steps or dataset.N_STEPS
 	args.checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
-    all_data = torch.cat(list(zip(*eval_loaders[:len(in_splits)])), 0)
-
+    all_data = chain(*eval_loaders[:len(in_splits)])
 
 	last_results_keys = None
 	m = 0
