@@ -22,44 +22,43 @@ from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 
 def sorted_features(model,class_loader):
-    """Sort dataset based on classes.
+	"""Sort dataset based on classes.
 
-    Parameters:
-        data (np.ndarray): data array
-        labels (np.ndarray): one dimensional array of class labels
-        num_classes (int): number of classes
-        stack (bol): combine sorted data into one numpy array
+	Parameters:
+		data (np.ndarray): data array
+		labels (np.ndarray): one dimensional array of class labels
+		num_classes (int): number of classes
+		stack (bol): combine sorted data into one numpy array
 
-    Return:
-        sorted data (np.ndarray), sorted_labels (np.ndarray)
+	Return:
+		sorted data (np.ndarray), sorted_labels (np.ndarray)
 
-    """
-    c = [[] for _ in range(model.num_classes)]
-    for x,y in class1:
-        batch = model.featurizer(x.cuda()).cpu().detach()
-        for i in range(len(batch)):
-            c[y[i]].append(batch[i])
-    c = [torch.stack(class_data,0) for class_data in c]
-    return c
+	"""
+	c = [[] for _ in range(model.num_classes)]
+	for x,y in class_loader:
+		batch = model.featurizer(x.cuda()).cpu().detach()
+		for i in range(len(batch)):
+			c[y[i]].append(batch[i])
+	c = [torch.stack(class_data,0) for class_data in c]
+	return c
 
 def mutual_information(model, class1, class2):
-    c1 = sorted_features(model,class1)
-    c2 = sorted_features(model,class2)
-    print(c1[0].shape)
-    mi = []
-    for i in range(model.num_classes):
-    	z = torch.cat((c1[i],c2[i]), 0)
-    	m,p = z.shape
-    	m1, _ = c1[i].shape
-    	m2, _ = c2[i].shape
-    	I = torch.eye(p).cpu()
-    	scalar = p / (m * 0.5)
-    	scalar1 = p / (m1 * 0.5)
-    	scalar2 = p / (m2 * 0.5)
-    	ld = torch.logdet(I + scalar * (z.T).matmul(z)) / 2.
-    	ld1 = torch.logdet(I + scalar1 * (c1[i].T).matmul(c1[i])) / (2. * m1)
-    	ld2 = torch.logdet(I + scalar2 * (c2[i].T).matmul(c2[i])) / (2. * m2)
-        mi.append(ld - ld1 - ld2)
+	c1 = sorted_features(model,class1)
+	c2 = sorted_features(model,class2)
+	mi = []
+	for i in range(model.num_classes):
+		z = torch.cat((c1[i],c2[i]), 0)
+		m,p = z.shape
+		m1, _ = c1[i].shape
+		m2, _ = c2[i].shape
+		I = torch.eye(p).cpu()
+		scalar = p / (m * 0.5)
+		scalar1 = p / (m1 * 0.5)
+		scalar2 = p / (m2 * 0.5)
+		ld = torch.logdet(I + scalar * (z.T).matmul(z)) / 2.
+		ld1 = torch.logdet(I + scalar1 * (c1[i].T).matmul(c1[i])) / (2. * m1)
+		ld2 = torch.logdet(I + scalar2 * (c2[i].T).matmul(c2[i])) / (2. * m2)
+		mi.append((ld - ld1 - ld2).item())
 	return mi
 
 if __name__ == "__main__":
@@ -184,6 +183,6 @@ if __name__ == "__main__":
 	for i in range(len(dataset)):
 		for j in range(i,len(dataset)):
 			d = mutual_information(algorithm,eval_loaders[i], eval_loaders[j])
-            labels = ['(D%d, D%d, C%d)' % (i,j,c) for c in range(len(d))]
-            misc.print_row(labels, colwidth=8)
-			misc.print_row(d, colwidth=8)
+			labels = ['(D%d, D%d, C%d)' % (i,j,c) for c in range(len(d))]
+			misc.print_row(labels, colwidth=12)
+			misc.print_row(d, colwidth=12)
