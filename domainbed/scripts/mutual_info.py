@@ -12,7 +12,6 @@ import uuid
 import numpy as np
 import torch
 import torch.utils.data
-from itertools import chain
 
 from domainbed import datasets
 from domainbed import hparams_registry
@@ -39,7 +38,7 @@ if __name__ == "__main__":
 	parser.add_argument('--checkpoint_freq', type=int, default=None,
 		help='Checkpoint every N steps. Default is dataset-dependent.')
 	parser.add_argument('--test_envs', type=int, nargs='+', default=[0])
-	parser.add_argument('--output_dir', type=str, default="train_output")
+	parser.add_argument('--file', type=str, default="G.pth.tar")
 	parser.add_argument('--holdout_fraction', type=float, default=0.2)
 	args = parser.parse_args()
 
@@ -47,9 +46,6 @@ if __name__ == "__main__":
 	# every once in a while, and then load them from disk here.
 	start_step = 0
 	algorithm_dict = None
-
-	os.makedirs(args.output_dir, exist_ok=True)
-	sys.stdout = misc.Tee(os.path.join(args.output_dir, 'log.txt'))
 
 	print('Args:')
 	for k, v in sorted(vars(args).items()):
@@ -126,71 +122,23 @@ if __name__ == "__main__":
 	algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
 		len(dataset) - len(args.test_envs), hparams)
 
-	if algorithm_dict is not None:
-		algorithm.load_state_dict(algorithm_dict)
-
+	algorithm.load_state_dict(torch.load(args.file))
 	algorithm = algorithm.to(device)
+    algorithm.eval()
+    all_data = chain(*train_loaders)
+    algorithm.update(all_data, components=True)
 
 	train_minibatches_iterator = zip(*train_loaders)
-	checkpoint_vals = collections.defaultdict(lambda: [])
-	steps_per_epoch = min([l.underlying_length for l in train_loaders])
-	n_steps = args.steps or dataset.N_STEPS
-	args.checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
+    minibatches_device = [(x.to(device), y.to(device))
+        for x,y in next(train_minibatches_iterator)]
 
-	last_results_keys = None
-	m = 0
-	for step in range(start_step, n_steps):
-		step_start_time = time.time()
-		minibatches_device = [(x.to(device), y.to(device))
-			for x,y in next(train_minibatches_iterator)]
-		step_vals = algorithm.update(minibatches_device)
-		if step % args.checkpoint_freq == 0 and args.algorithm == 'MCR':
-            all_data = chain(*eval_loaders[:len(in_splits)])
-			algorithm.update(all_data, components=True)
-		checkpoint_vals['step_time'].append(time.time() - step_start_time)
+    print('SVD Accuracy')
+    evals = zip(eval_loader_names, eval_loaders, eval_weights)
+    for name, loader, weights in evals:
+        acc = misc.accuracy(algorithm, loader, weights, device)
+        results[name+'_acc'] = acc
+    results_keys = sorted(results.keys())
+    misc.print_row(results_keys, colwidth=12)
+    misc.print_row([results[key] for key in results_keys], colwidth=12)
 
-		for key, val in step_vals.items():
-			checkpoint_vals[key].append(val)
-
-		if step % args.checkpoint_freq == 0:
-			results = {
-				'step': step,
-				'epoch': step / steps_per_epoch,
-			}
-
-			for key, val in checkpoint_vals.items():
-				results[key] = np.mean(val)
-
-			evals = zip(eval_loader_names, eval_loaders, eval_weights)
-			for name, loader, weights in evals:
-				acc = misc.accuracy(algorithm, loader, weights, device)
-				results[name+'_acc'] = acc
-			current_val = np.average([results['env{}_out_acc'.format(i)] for i in range(len(in_splits)) if i not in args.test_envs])
-			if m <= current_val:
-				m = current_val
-				print('saved at step %d'%(step))
-				torch.save(algorithm.state_dict(),
-						   os.path.join(args.output_dir, "G.pth.tar"))
-
-			results_keys = sorted(results.keys())
-			if results_keys != last_results_keys:
-				misc.print_row(results_keys, colwidth=12)
-				last_results_keys = results_keys
-			misc.print_row([results[key] for key in results_keys],
-				colwidth=12)
-
-			results.update({
-				'hparams': hparams,
-				'args': vars(args)
-			})
-
-			epochs_path = os.path.join(args.output_dir, 'results.jsonl')
-			with open(epochs_path, 'a') as f:
-				f.write(json.dumps(results, sort_keys=True) + "\n")
-
-			algorithm_dict = algorithm.state_dict()
-			start_step = step + 1
-			checkpoint_vals = collections.defaultdict(lambda: [])
-
-	with open(os.path.join(args.output_dir, 'done'), 'w') as f:
-		f.write('done')
+    print('SVD')
