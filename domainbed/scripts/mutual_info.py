@@ -56,8 +56,8 @@ def mutual_information(model, class1, class2):
 		scalar1 = p / (m1 * 0.5)
 		scalar2 = p / (m2 * 0.5)
 		ld = torch.logdet(I + scalar * (z.T).matmul(z)) / 2.
-		ld1 = torch.logdet(I + scalar1 * (c1[i].T).matmul(c1[i])) / (2. * m1)
-		ld2 = torch.logdet(I + scalar2 * (c2[i].T).matmul(c2[i])) / (2. * m2)
+		ld1 = m1 * torch.logdet(I + scalar1 * (c1[i].T).matmul(c1[i])) / (2. * m)
+		ld2 = m2 * torch.logdet(I + scalar2 * (c2[i].T).matmul(c2[i])) / (2. * m)
 		mi.append((ld - ld1 - ld2).item())
 	return mi
 
