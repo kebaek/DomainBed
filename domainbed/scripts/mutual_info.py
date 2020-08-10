@@ -113,15 +113,6 @@ if __name__ == "__main__":
 		in_splits.append((in_, in_weights))
 		out_splits.append((out, out_weights))
 
-	train_loaders = [FastDataLoader(
-		dataset=env,
-		weights=env_weights,
-		batch_size=hparams['batch_size'],
-		num_workers=dataset.N_WORKERS,
-		length=FastDataLoader.INFINITE)
-		for i, (env, env_weights) in enumerate(in_splits)
-		if i not in args.test_envs]
-
 	eval_loaders = [FastDataLoader(
 		dataset=env,
 		weights=None,
