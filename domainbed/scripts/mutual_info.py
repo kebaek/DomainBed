@@ -81,7 +81,7 @@ if __name__ == "__main__":
 	parser.add_argument('--checkpoint_freq', type=int, default=None,
 		help='Checkpoint every N steps. Default is dataset-dependent.')
 	parser.add_argument('--test_envs', type=int, nargs='+', default=[0])
-	parser.add_argument('--folder', type=str, default="G.pth.tar")
+	parser.add_argument('--output_dir', type=str, default="G.pth.tar")
 	parser.add_argument('--holdout_fraction', type=float, default=0.2)
 	args = parser.parse_args()
 
@@ -156,7 +156,7 @@ if __name__ == "__main__":
 	algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
 		len(dataset) - len(args.test_envs), hparams)
 
-	algorithm.load_state_dict(torch.load(args.folder + '/G.pth.tar'))
+	algorithm.load_state_dict(torch.load(args.output_dir + '/G.pth.tar'))
 	algorithm = algorithm.to(device)
 	algorithm.eval()
 	all_data = chain(*eval_loaders[:len(in_splits)])
@@ -172,8 +172,8 @@ if __name__ == "__main__":
 	misc.print_row(results_keys, colwidth=12)
 	misc.print_row([results[key] for key in results_keys], colwidth=12)
 
-	np.save(args.folder+'/components.npy', algorithm.components)
-	np.save(args.folder+'/singular.npy', algorithm.singular_values)
+	np.save(args.output_dir+'/components.npy', algorithm.components)
+	np.save(args.output_dir+'/singular.npy', algorithm.singular_values)
 
 	print('SVD Singular Values')
 	for i in range(dataset.num_classes):
