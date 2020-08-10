@@ -131,6 +131,33 @@ def accuracy(network, loader, weights, device):
 
     return correct / total
 
+def inaccurate_features(network, loader, weights, device):
+    weights_offset = 0
+    correct = 0
+    total = 0
+    features = []
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            y = y.to(device)
+            p = network.predict(x)
+            if weights is None:
+                batch_weights = torch.ones(len(x))
+            else:
+                batch_weights = weights[weights_offset : weights_offset + len(x)]
+                weights_offset += len(x)
+            batch_weights = batch_weights.cuda()
+            if p.size(1) == 1:
+                incorrect = np.invert(p.gt(0).eq(y))
+                correct += (p.gt(0).eq(y).float() * batch_weights).sum().item()
+            else:
+                incorrect = np.invert(p.argmax(1).eq(y))
+                correct += (p.argmax(1).eq(y).float() * batch_weights).sum().item()
+            features.append(x[incorrect])
+            total += batch_weights.sum().item()
+    print(correct / total)
+    return np.array(features)
+
 class Tee:
     def __init__(self, fname, mode="a"):
         self.stdout = sys.stdout

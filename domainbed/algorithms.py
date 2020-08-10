@@ -76,7 +76,6 @@ class ERM(Algorithm):
             lr=self.hparams["lr"],
             weight_decay=self.hparams['weight_decay']
         )
-        self.classification = hparams['classification']
         self.num_classes = num_classes
         self.components = {}
         self.singular_values = {}
@@ -89,10 +88,7 @@ class ERM(Algorithm):
                 p.append(self.featurizer(x.cuda()).cpu().detach())
                 all_y.append(y)
             p, all_y = torch.cat(p), torch.cat(all_y)
-            if self.classification == 'svm':
-                self.svm(p, all_y)
-            else:
-                self.svd(p, all_y)
+            self.svd(p, all_y)
             return None
         else:
             all_x = torch.cat([x for x,y in minibatches])
