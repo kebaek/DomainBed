@@ -157,7 +157,7 @@ class MCR(Algorithm):
             p = torch.from_numpy(p).to(device)
         else:
             for j in range(self.num_classes):
-                svd_j = torch.matmul(torch.eye(self.hparams['fd']).to(device) - torch.matmul(self.components[j].t(),self.components[j]),x.t())
+                svd_j = torch.matmul(torch.eye(self.hparams['fd']).to(device) - torch.matmul(self.components[j].t(),self.components[j]).to(device),x.t().to(device))
                 score_svd_j = torch.norm(svd_j, dim=0)
                 scores_svd.append(score_svd_j)
             p = torch.argmin(torch.stack(scores_svd), dim=0)
