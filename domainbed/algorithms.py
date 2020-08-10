@@ -113,8 +113,12 @@ class MCR(Algorithm):
 
     def update(self, minibatches, components=False):
         if components:
-            p = torch.cat([self.featurizer(x.cuda()).cpu().detach() for x,y in minibatches])
-            all_y = torch.cat([y for x,y in minibatches])
+            p = []
+            all_y = []
+            for x,y in minibatches:
+                p.append(self.featurizer(x.cuda()).cpu().detach())
+                all_y.append(y)
+            p, all_y = torch.cat(p), torch.cat(all_y)
             if self.classification == 'svm':
                 self.svm(p, all_y)
             else:
