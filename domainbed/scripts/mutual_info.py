@@ -205,7 +205,7 @@ if __name__ == "__main__":
 	print('Mutual Information per Class')
 	for i in range(len(dataset)):
 		for j in range(i,len(dataset)):
-			d = mutual_information(algorithm,eval_loaders[i], eval_loaders[j])
+			d = mutual_information_per_class(algorithm,eval_loaders[i], eval_loaders[j])
 			labels = ['(D%d, D%d, C%d)' % (i,j,c) for c in range(len(d))]
 			misc.print_row(labels, colwidth=12)
 			misc.print_row(d, colwidth=12)
