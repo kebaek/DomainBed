@@ -20,6 +20,7 @@ from domainbed import hparams_registry
 from domainbed import algorithms
 from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
+import torch.nn.functional as F
 
 def sorted_features(model,class_loader):
 	"""Sort dataset based on classes.
@@ -36,15 +37,15 @@ def sorted_features(model,class_loader):
 	"""
 	c = [[] for _ in range(model.num_classes)]
 	for x,y in class_loader:
-		batch = model.featurizer(x.cuda()).cpu().detach()
+		batch = F.normalize(model.featurizer(x.cuda())).cpu().detach()
 		for i in range(len(batch)):
 			c[y[i]].append(batch[i])
 	c = [torch.stack(class_data,0) for class_data in c]
 	return c
 
 def mutual_information(model, class1, class2):
-	c1 = torch.cat([model.featurizer(x.cuda()).cpu().detach() for x,y in class1])
-	c2 = torch.cat([model.featurizer(x.cuda()).cpu().detach() for x,y in class2])
+	c1 = torch.cat([F.normalize(model.featurizer(x.cuda())).cpu().detach() for x,y in class1])
+	c2 = torch.cat([F.normalize(model.featurizer(x.cuda())).cpu().detach() for x,y in class2])
 	z = torch.cat((c1,c2), 0)
 	m,p = z.shape
 	m1, _ = c1.shape
