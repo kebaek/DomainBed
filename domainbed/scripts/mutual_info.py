@@ -37,16 +37,20 @@ def sorted_features(model,class_loader):
 	"""
 	c = [[] for _ in range(model.num_classes)]
 	for x,y in class_loader:
-		batch = F.normalize(model.featurizer(x.cuda())).cpu().detach()
+		batch = model.featurizer(x.cuda()).cpu().detach()
 		for i in range(len(batch)):
 			c[y[i]].append(batch[i])
 	c = [torch.stack(class_data,0) for class_data in c]
+	c = [F.normalize(class_data - torch.mean(class_data, 0)) for class_data in c]
 	return c
 
 def mutual_information(model, class1, class2):
-	c1 = torch.cat([F.normalize(model.featurizer(x.cuda())).cpu().detach() for x,y in class1])
-	c2 = torch.cat([F.normalize(model.featurizer(x.cuda())).cpu().detach() for x,y in class2])
+	c1 = torch.cat([model.featurizer(x.cuda()).cpu().detach() for x,y in class1])
+	c2 = torch.cat([model.featurizer(x.cuda()).cpu().detach() for x,y in class2])
 	z = torch.cat((c1,c2), 0)
+	c1 = F.normalize(c1 - torch.mean(c1, 0))
+	c2 = F.normalize(c2 - torch.mean(c2, 0))
+	z = F.normalize(z - torch.mean(z, 0))
 	m,p = z.shape
 	m1, _ = c1.shape
 	m2, _ = c2.shape
