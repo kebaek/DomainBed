@@ -78,7 +78,7 @@ class MutualInformation(torch.nn.Module):
         m,p = z.shape
         m1, _ = D1.shape
         m2, _ = D2.shape
-        I = torch.eye(p).cuda()
+        I = torch.eye(p).cpu()
         scalar = p / (m * self.eps)
         scalar1 = p / (m1 * self.eps)
         scalar2 = p / (m2 * self.eps)
