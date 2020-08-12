@@ -68,6 +68,26 @@ class MaximalCodingRateReduction(torch.nn.Module):
           #      [discrimn_loss_empi.item(), compress_loss_empi.item()],
            #     [discrimn_loss_theo.item(), compress_loss_theo.item()])
 
+class MutualInformation(torch.nn.Module):
+    def __init__(self, eps=0.01):
+        super(ConditionalMutualInformation, self).__init__()
+        self.eps = eps
+
+    def forward(self, D1, D2):
+        z = torch.cat((D1,D2), 0)
+        m,p = z.shape
+        m1, _ = D1.shape
+        m2, _ = D2.shape
+        I = torch.eye(p).cuda()
+        scalar = p / (m * self.eps)
+        scalar1 = p / (m1 * self.eps)
+        scalar2 = p / (m2 * self.eps)
+        ld = torch.logdet(I + scalar * (z.T).matmul(z)) / 2.
+        ld1 = m1 * torch.logdet(I + scalar1 * (c1[i].T).matmul(c1[i])) / (2. * m)
+        ld2 = m2 * torch.logdet(I + scalar2 * (c2[i].T).matmul(c2[i])) / (2. * m)
+        return ld - ld1 - ld2
+
+
 def label_to_membership(targets, num_classes=None):
     """Generate a true membership matrix, and assign value to current Pi.
 
