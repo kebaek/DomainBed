@@ -31,7 +31,7 @@ def _hparams(algorithm, dataset, random_state):
 		hparams['weight_decay'] = (0., 10**random_state.uniform(-6, -2))
 
 	hparams['class_balanced'] = (False, False)
-	hparams['beta'] = (1,1)
+	hparams['beta'] = (0.5,0.5)
 	hparams['n_comp'] = (10,1)
 	hparams['classification']=('svd','svd')
 
