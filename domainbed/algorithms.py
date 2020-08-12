@@ -161,7 +161,7 @@ class ERMCR(Algorithm):
             for i,(x,y) in enumerate(minibatches):
                 for c in range(self.num_classes):
                     z_domain = all_z[j:j+len(y)]
-                    dict[i][c] = torch.stack(z_domain[y == c])
+                    dict[i][c] = z_domain[y == c]
                 j += len(x)
 
             for i in range(self.num_domains):
