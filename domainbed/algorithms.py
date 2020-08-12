@@ -140,7 +140,7 @@ class ERMCR(Algorithm):
         self.components = {}
         self.singular_values = {}
 
-    def update(self, minibatches, components=False):
+    def update(self, minibatches, components=False, loaders=None):
         if components:
             p = []
             all_y = []
@@ -151,20 +151,24 @@ class ERMCR(Algorithm):
             self.svd(p, all_y)
             return None
         else:
-            all_x = torch.cat([x for x,y in minibatches])
+            all__x = torch.cat([x for x,y in minibatches])
             all_y = torch.cat([y for x,y in minibatches])
             ce = F.cross_entropy(self.predict(all_x), all_y)
 
-            all_z = self.featurizer(all_x).cuda()
-            mi, j = 0, 0
             dict = [{} for _ in range(self.num_domains)]
-            for i,(x,y) in enumerate(minibatches):
-                for c in range(self.num_classes):
-                    z_domain = all_z[j:j+len(y)]
-                    dict[i][c] = z_domain[y == c]
-                j += len(x)
-            print([[len(dict[i][c]) for c in dict[i]] for i in range(self.num_domains)])
+            for i, loader in iter(loaders):
+                data = iter(loader)
+                all_z = []
+                all_y = []
+                for x,y in data:
+                    all_z.append(self.featurizer(x))
+                    all_y.append(y)
+                all_z, all_y = torch.cat(all_z), torch.cat(all_y)
 
+                for c in range(self.num_classes):
+                    dict[i][c] = all_z[all_y == c]
+
+            mi = 0
             for i in range(self.num_domains):
                 for j in range(i+1, self.num_domains):
                     for c in range(self.num_classes):
