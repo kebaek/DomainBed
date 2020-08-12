@@ -163,6 +163,7 @@ class ERMCR(Algorithm):
                     z_domain = all_z[j:j+len(y)]
                     dict[i][c] = z_domain[y == c]
                 j += len(x)
+            print([[len(dict[i][c]) for c in dict[i]] for i in range(self.num_domains)])
 
             for i in range(self.num_domains):
                 for j in range(i+1, self.num_domains):
