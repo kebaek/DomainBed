@@ -70,7 +70,7 @@ class MaximalCodingRateReduction(torch.nn.Module):
 
 class MutualInformation(torch.nn.Module):
     def __init__(self, eps=0.01):
-        super(ConditionalMutualInformation, self).__init__()
+        super(MutualInformation, self).__init__()
         self.eps = eps
 
     def forward(self, D1, D2):
