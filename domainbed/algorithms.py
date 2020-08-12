@@ -153,9 +153,9 @@ class ERMCR(Algorithm):
         else:
             all_x = torch.cat([x for x,y in minibatches])
             all_y = torch.cat([y for x,y in minibatches])
-            all_z = self.featurizer(all_x).cpu()
             ce = F.cross_entropy(self.predict(all_x), all_y)
 
+            all_z = self.featurizer(all_x).cpu()
             mi, j = 0, 0
             dict = [{} for _ in range(self.num_domains)]
             for i,x,y in enumerate(minibatches):
