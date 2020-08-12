@@ -175,7 +175,7 @@ class ERMCR(Algorithm):
             loss.backward()
             self.optimizer.step()
 
-            return {'loss': loss.item(), 'ce': ce, 'mi': self.beta*mi}
+            return {'loss': loss.item(), 'ce': ce.item(), 'mi': self.beta*mi.item()}
 
     def svd(self, x, y):
         sorted_data = [[] for _ in range(self.num_classes)]
