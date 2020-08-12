@@ -83,8 +83,8 @@ class MutualInformation(torch.nn.Module):
         scalar1 = p / (m1 * self.eps)
         scalar2 = p / (m2 * self.eps)
         ld = torch.logdet(I + scalar * (z.T).matmul(z)) / 2.
-        ld1 = m1 * torch.logdet(I + scalar1 * (c1[i].T).matmul(c1[i])) / (2. * m)
-        ld2 = m2 * torch.logdet(I + scalar2 * (c2[i].T).matmul(c2[i])) / (2. * m)
+        ld1 = m1 * torch.logdet(I + scalar1 * (D1.T).matmul(D1)) / (2. * m)
+        ld2 = m2 * torch.logdet(I + scalar2 * (D2.T).matmul(D2)) / (2. * m)
         return ld - ld1 - ld2
 
 
