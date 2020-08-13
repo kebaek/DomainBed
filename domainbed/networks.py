@@ -43,13 +43,12 @@ class ResNet50(torch.nn.Module):
         self.freeze_bn()
         self.hparams = hparams
         self.dropout = nn.Dropout(hparams['resnet_dropout'])
-        '''
         self.reshape = torch.nn.Sequential(
             nn.Linear(self.n_outputs, self.n_outputs, bias=False),
             nn.BatchNorm1d(self.n_outputs),
             nn.ReLU(inplace=True),
             nn.Linear(self.n_outputs, hparams['fd'], bias=True)
-        )'''
+        )
 
     def forward(self, x):
         """Encode x into a feature vector of size n_outputs."""
@@ -64,9 +63,9 @@ class ResNet50(torch.nn.Module):
         x = self.network.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.dropout(x)
-        #x = self.reshape(x)
-        #return F.normalize(x)
-        return x	
+        x = self.reshape(x)
+        return F.normalize(x)
+        #return x	
     def train(self, mode=True):
         """
         Override the default train() to freeze the BN parameters
