@@ -15,7 +15,7 @@ def _hparams(algorithm, dataset, random_state):
 
 	fd = int(random_state.uniform(2, 8))
    # hparams['fd'] = (60,fd*10)
-	hparams['fd']=(2048,10)
+	hparams['fd']=(60,10)
 	if dataset in RESNET_DATASETS:
 		hparams['lr'] = (5e-5, 10**random_state.uniform(-5, -3.5))
 		hparams['batch_size'] = (50, int(2**random_state.uniform(3, 5.5)))
