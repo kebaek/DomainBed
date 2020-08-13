@@ -154,8 +154,8 @@ class ERMCR(Algorithm):
 			all_x = torch.cat([x for x,y in minibatches])
 			all_y = torch.cat([y for x,y in minibatches])
 			ce = F.cross_entropy(self.predict(all_x), all_y)
-			
-			'''			
+
+			'''
 			dict = [{} for _ in range(self.num_domains)]
 			for i, loader in enumerate(loaders):
 				all_z = []
@@ -259,18 +259,25 @@ class MCR(Algorithm):
 			self.components[j] = vt.t()[:self.hparams['n_comp']]
 			self.singular_values[j] = s[:self.hparams['n_comp']]
 
+
 	def svm(self,x,y):
 		self.components = LinearSVC(verbose=0, random_state=10)
 		self.components.fit(x.cpu().detach().numpy(),y.cpu().detach().numpy())
 
-	def predict(self, x):
+	def predict(self, x, weighted=True):
 		x = self.featurizer(x)
 		scores_svd = []
 		if self.classification == 'svm':
 			p = self.components.predict(x.cpu().detach().numpy())
 			p = torch.from_numpy(p).to(device)
-		else:
+		elif weighted:
 			for j in range(self.num_classes):
+				svd_j = torch.matmul(torch.eye(self.hparams['fd']).to(device) - torch.matmul(self.components[j].t(),self.components[j]).to(device),x.t().to(device))
+				score_svd_j = torch.norm(svd_j*(1/self.singular_values[j]), dim=0)
+				scores_svd.append(score_svd_j)
+			p = torch.argmin(torch.stack(scores_svd), dim=0)
+        else:
+            for j in range(self.num_classes):
 				svd_j = torch.matmul(torch.eye(self.hparams['fd']).to(device) - torch.matmul(self.components[j].t(),self.components[j]).to(device),x.t().to(device))
 				score_svd_j = torch.norm(svd_j, dim=0)
 				scores_svd.append(score_svd_j)
