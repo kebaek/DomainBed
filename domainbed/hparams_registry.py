@@ -15,7 +15,7 @@ def _hparams(algorithm, dataset, random_state):
 
 	fd = int(random_state.uniform(2, 8))
    # hparams['fd'] = (60,fd*10)
-	hparams['fd']=(30,10)
+	hparams['fd']=(40,10)
 	if dataset in RESNET_DATASETS:
 		hparams['lr'] = (2e-5, 10**random_state.uniform(-5, -3.5))
 		hparams['batch_size'] = (64, int(2**random_state.uniform(3, 5.5)))
@@ -31,8 +31,8 @@ def _hparams(algorithm, dataset, random_state):
 		hparams['weight_decay'] = (0., 10**random_state.uniform(-6, -2))
 
 	hparams['class_balanced'] = (True, False)
-	hparams['beta'] = (0.0005,0.5)
-	hparams['n_comp'] = (3,1)
+	hparams['beta'] = (0.01,0.5)
+	hparams['n_comp'] = (4,1)
 	hparams['classification']=('svd','svd')
 
 	if algorithm in ['DANN', 'CDANN']:

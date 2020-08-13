@@ -219,10 +219,11 @@ class MCR(Algorithm):
 			weight_decay=self.hparams['weight_decay']
 		)
 		self.classification = hparams['classification']
-		self.num_classes = num_classes
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
+		self.beta = hparams['beta']
+		self.cmi = MutualInformation(eps=0.5).to(device)
 
 	def update(self, minibatches, components=False):
 		if components:
@@ -260,7 +261,7 @@ class MCR(Algorithm):
 			loss.backward()
 			self.optimizer.step()
 
-			return {'loss': loss.item(), 'mcr': ce.item(), 'mi': self.beta*mi.item()}
+			return {'loss': loss.item(), 'mcr': mcr.item(), 'mi': self.beta*mi.item()}
 
 
 	def svd(self, x, y):
