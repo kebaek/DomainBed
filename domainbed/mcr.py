@@ -78,14 +78,14 @@ class MutualInformation(torch.nn.Module):
         m,p = z.shape
         m1, _ = D1.shape
         m2, _ = D2.shape
-        I = torch.eye(p).cuda()
+        I = torch.eye(p).cpu()
         scalar = p / (m * self.eps)
         scalar1 = p / (m1 * self.eps)
         scalar2 = p / (m2 * self.eps)
         ld = torch.logdet(I + scalar * (z.T).matmul(z)) / 2.
         ld1 = m1 * torch.logdet(I + scalar1 * (D1.T).matmul(D1)) / (2. * m)
         ld2 = m2 * torch.logdet(I + scalar2 * (D2.T).matmul(D2)) / (2. * m)
-        return ld - ld1 - ld2
+        return (ld - ld1 - ld2).cuda()
 
 
 def label_to_membership(targets, num_classes=None):

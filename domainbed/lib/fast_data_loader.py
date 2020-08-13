@@ -29,7 +29,6 @@ class FastDataLoader(object):
 
         if weights == None:
             weights = torch.ones(len(dataset))
-
         if length == self.INFINITE:
             batch_sampler = torch.utils.data.BatchSampler(
                 torch.utils.data.WeightedRandomSampler(weights,

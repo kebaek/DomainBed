@@ -143,11 +143,11 @@ if __name__ == "__main__":
 		step_start_time = time.time()
 		minibatches_device = [(x.to(device), y.to(device))
 			for x,y in next(train_minibatches_iterator)]
-		if args.algorithm == 'ERMCR':
-			all_loaders = eval_loaders[:len(in_splits)][not args.test_envs[0]])
-			step_vals = algorithm.update(minibatches_device, loaders = all_loaders)
-		else:
-			step_vals = algorithm.update(minibatches_device)
+		#if args.algorithm == 'ERMCR':
+		#	all_loaders = [eval_loaders[len(in_splits) + i] for i in range(len(out_splits)) if i not in args.test_envs]
+		#	step_vals = algorithm.update(minibatches_device, loaders = all_loaders)
+		#else:
+		step_vals = algorithm.update(minibatches_device)
 		#if step % args.checkpoint_freq == 0 and args.algorithm == 'MCR':
 		#	all_data = chain(*eval_loaders[:len(in_splits)])
 		#	algorithm.update(all_data, components=True)
