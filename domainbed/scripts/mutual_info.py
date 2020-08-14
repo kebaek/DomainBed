@@ -22,6 +22,22 @@ from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 import torch.nn.functional as F
 
+def svd(self, x, y):
+	sorted_data = [[] for _ in range(self.num_classes)]
+	for i, lbl in enumerate(y):
+		sorted_data[lbl].append(x[i])
+	sorted_data = [torch.stack(class_data).cpu() for class_data in sorted_data]
+
+	components = [[] for i in range(self.num_classes)]
+	singular_values = [[] for i in range(self.num_classes)]
+
+	for j in range(self.num_classes):
+		u,s,vt = torch.svd(sorted_data[j])
+		components[j] = vt.t()[:self.hparams['n_comp']]
+		singular_values[j] = s[:self.hparams['n_comp']]
+
+	return components, singular_values
+
 def sorted_features(featurizer, num_classes,class_loader):
 	"""Sort dataset based on classes.
 
@@ -203,6 +219,21 @@ if __name__ == "__main__":
 		for i in range(dataset.num_classes):
 			print('Class %d' %(i))
 			print('Values: {0}'.format(singular_values[i].numpy()))
+
+	print('SVD by Domain')
+	for featurizer in algorithm.networks:
+		for i in range(len(in_splits)):
+			p = []
+			all_y = []
+			iterator = iter(eval_loaders[i])
+			for x,y in iterator:
+				p.append(featurizer(x.cuda()).cpu().detach())
+				all_y.append(y)
+			p, all_y = torch.cat(p), torch.cat(all_y)
+		components, singular_values = self.svd(p, all_y)
+		for c, sg in enumerate(singular_values):
+			print('Domain %d, Class %d' %(i,c))
+			print('Values: {0}'.format(sg[c].numpy()))
 
 	print('Mutual Information')
 	for featurizer in algorithm.networks:
