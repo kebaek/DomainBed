@@ -214,12 +214,12 @@ class MCR(Algorithm):
 								  hparams)
 		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
 		self.network = self.featurizer
+		self.networks = [self.featurizer]
 		self.optimizer = torch.optim.Adam(
-			self.network.parameters(),
+			self.featurizer.parameters(),
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
-		self.classification = hparams['classification']
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
@@ -234,10 +234,7 @@ class MCR(Algorithm):
 				p.append(self.featurizer(x.cuda()).cpu().detach())
 				all_y.append(y)
 			p, all_y = torch.cat(p), torch.cat(all_y)
-			if self.classification == 'svm':
-				self.svm(p, all_y)
-			else:
-				self.svd(p, all_y)
+			self.svd(p, all_y)
 			return None
 		else:
 			p = self.featurizer(torch.cat([x for x,y in minibatches]))
@@ -284,21 +281,11 @@ class MCR(Algorithm):
 	def predict(self, x, weighted=True):
 		x = self.featurizer(x)
 		scores_svd = []
-		if self.classification == 'svm':
-			p = self.components.predict(x.cpu().detach().numpy())
-			p = torch.from_numpy(p).to(device)
-		elif weighted:
-			for j in range(self.num_classes):
-				svd_j = torch.matmul(torch.matmul(F.normalize(self.singular_values[j], dim=0)*self.components[j].t(),self.components[j]).to(device),x.t().to(device))
-				score_svd_j = torch.norm(svd_j, dim=0)
-				scores_svd.append(score_svd_j)
+		for j in range(self.num_classes):
+			svd_j = torch.matmul(torch.matmul(F.normalize(self.singular_values[j], dim=0)*self.components[j].t(),self.components[j]).to(device),x.t().to(device))
+			score_svd_j = torch.norm(svd_j, dim=0)
+			scores_svd.append(score_svd_j)
 			p = torch.argmax(torch.stack(scores_svd), dim=0)
-		else:
-			for j in range(self.num_classes):
-				svd_j = torch.matmul(torch.eye(self.hparams['fd']).to(device) - torch.matmul(self.components[j].t(),self.components[j]).to(device),x.t().to(device))
-				score_svd_j = torch.norm(svd_j, dim=0)
-				scores_svd.append(score_svd_j)
-			p = torch.argmin(torch.stack(scores_svd), dim=0)
 		return F.one_hot(p, self.num_classes)
 
 class Union(Algorithm):
@@ -307,68 +294,67 @@ class Union(Algorithm):
 	"""
 
 	def __init__(self, input_shape, num_classes, num_domains, hparams):
-		super(MCR, self).__init__(input_shape, num_classes, num_domains,
+		super(Union, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 		self.featurizer1 = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
 		self.featurizer2 = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-        self.networks = [self.featurizer1, self.featurizer2]
-		self.optimizer1 = torch.optim.Adam(
+		self.networks = [self.featurizer1, self.featurizer2]
+		self.optimizers = [torch.optim.Adam(
 			self.featurizer1.parameters(),
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
-		)
-        self.optimizer2 = torch.optim.Adam(
+		),
+		 torch.optim.Adam(
 			self.featurizer2.parameters(),
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
-		)
+		)]
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = [{}, {}]
-        self.singular_values = [{}, {}]
+		self.singular_values = [{}, {}]
 		self.beta = hparams['beta']
 		self.cmi = MutualInformation(eps=0.5).to(device)
 
 	def update(self, minibatches, components=False):
 		if components:
-            for i, featurizer in enumerate(self.networks):
-    			p = []
-    			all_y = []
-    			for x,y in minibatches:
-    				p.append(featurizer(x.cuda()).cpu().detach())
-    				all_y.append(y)
-    			p, y = torch.cat(p), torch.cat(all_y)
-    			self.svd(p, all_y, i)
-    			return None
+			for x,y in minibatches:
+				p, all_y = [[], []], [[], []]
+				for i, featurizer in enumerate(self.networks):
+					p[i].append(featurizer(x.cuda()).cpu().detach())
+					all_y[i].append(y)
+			p1,p2, all_y = torch.cat(p[0]),torch.cat(p[1]), torch.cat(all_y[0])
+			self.svd(p1, all_y, 0)
+			self.svd(p2, all_y, 1)
+			return None
 		else:
-            losses = []
-            for i, featurizer in enumerate(self.networks):
-    			p = featurizer(torch.cat([x for x,y in minibatches]))
-    			all_y = torch.cat([y for x,y in minibatches])
-    			mcr, loss_empi, loss_theo = self.criterion(p, all_y)
+			losses = []
+			for f, featurizer in enumerate(self.networks):
+				p = featurizer(torch.cat([x for x,y in minibatches]))
+				all_y = torch.cat([y for x,y in minibatches])
+				mcr, loss_empi, loss_theo = self.criterion(p, all_y)
+	
+				mi, j = 0,0
+				dict = [{} for _ in range(self.num_domains)]
+				for i,(x,y) in enumerate(minibatches):
+					for c in range(self.num_classes):
+						z_domain = p[j:j+len(y)]
+						dict[i][c] = z_domain[y == c].cpu()
+					j += len(y)
+				for i in range(self.num_domains):
+					for j in range(i+1, self.num_domains):
+						for c in range(self.num_classes):
+							mi += self.cmi(dict[i][c],dict[j][c])
 
-    			mi, j = 0,0
-    			dict = [{} for _ in range(self.num_domains)]
-    			for i,(x,y) in enumerate(minibatches):
-    				for c in range(self.num_classes):
-    					z_domain = p[j:j+len(y)]
-    					dict[i][c] = z_domain[y == c].cpu()
-    				j += len(y)
-    			for i in range(self.num_domains):
-    				for j in range(i+1, self.num_domains):
-    					for c in range(self.num_classes):
-    						mi += self.cmi(dict[i][c],dict[j][c])
+				if f == 0:
+				    loss = mcr + self.beta*mi
+				else:
+				    loss = loss = mcr - self.beta*mi
+				self.optimizers[f].zero_grad()
+				loss.backward()
+				self.optimizers[f].step()
 
-                if i == 0:
-                    loss = mcr + self.beta*mi
-                else:
-                    loss = loss = mcr - self.beta*mi
-
-    			self.optimizer.zero_grad()
-    			loss.backward()
-    			self.optimizer.step()
-
-                losses[i] = loss.item()
-
+				losses.append(loss.item())
+	
 			return {'loss1': losses[0], 'loss2': losses[1]}
 
 
@@ -385,14 +371,14 @@ class Union(Algorithm):
 
 
 	def predict(self, x):
-		x = self.featurizer(x)
 		scores_svd = []
 		for j in range(self.num_classes):
-            score_svd_j = 0
-            for i in range(2):
-				svd_j = torch.matmul(torch.matmul(F.normalize(self.singular_values[i][j], dim=0)*self.components[i][j].t(),self.components[i][j]).to(device),x.t().to(device))
+			score_svd_j = 0
+			for i in range(2):
+				f = self.networks[i](x)	
+				svd_j = torch.matmul(torch.matmul(F.normalize(self.singular_values[i][j], dim=0)*self.components[i][j].t(),self.components[i][j]).to(device),f.t().to(device))
 				score_svd_j += torch.norm(svd_j, dim=0)
-            scores_svd.append(score_svd_j)
+			scores_svd.append(score_svd_j)
 		p = torch.argmax(torch.stack(scores_svd), dim=0)
 		return F.one_hot(p, self.num_classes)
 

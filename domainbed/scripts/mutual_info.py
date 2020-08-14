@@ -22,7 +22,7 @@ from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 import torch.nn.functional as F
 
-def sorted_features(model,class_loader):
+def sorted_features(featurizer, num_classes,class_loader):
 	"""Sort dataset based on classes.
 
 	Parameters:
@@ -35,18 +35,18 @@ def sorted_features(model,class_loader):
 		sorted data (np.ndarray), sorted_labels (np.ndarray)
 
 	"""
-	c = [[] for _ in range(model.num_classes)]
+	c = [[] for _ in range(num_classes)]
 	for x,y in class_loader:
-		batch = model.featurizer(x.cuda()).cpu().detach()
+		batch = featurizer(x.cuda()).cpu().detach()
 		for i in range(len(batch)):
 			c[y[i]].append(batch[i])
 	c = [torch.stack(class_data,0) for class_data in c]
 	c = [F.normalize(class_data - torch.mean(class_data, 0)) for class_data in c]
 	return c
 
-def mutual_information(model, class1, class2):
-	c1 = torch.cat([model.featurizer(x.cuda()).cpu().detach() for x,y in class1])
-	c2 = torch.cat([model.featurizer(x.cuda()).cpu().detach() for x,y in class2])
+def mutual_information(featurizer, class1, class2):
+	c1 = torch.cat([featurizer(x.cuda()).cpu().detach() for x,y in class1])
+	c2 = torch.cat([featurizer(x.cuda()).cpu().detach() for x,y in class2])
 	z = torch.cat((c1,c2), 0)
 	c1 = F.normalize(c1 - torch.mean(c1, 0))
 	c2 = F.normalize(c2 - torch.mean(c2, 0))
@@ -64,11 +64,11 @@ def mutual_information(model, class1, class2):
 
 	return ld - ld1 - ld2
 
-def mutual_information_per_class(model, class1, class2):
-	c1 = sorted_features(model,class1)
-	c2 = sorted_features(model,class2)
+def mutual_information_per_class(featurizer,num_classes, class1, class2):
+	c1 = sorted_features(featurizer,num_classes,class1)
+	c2 = sorted_features(featurizer,num_classes,class2)
 	mi = []
-	for i in range(model.num_classes):
+	for i in range(num_classes):
 		z = torch.cat((c1[i],c2[i]), 0)
 		m,p = z.shape
 		m1, _ = c1[i].shape
@@ -197,20 +197,25 @@ if __name__ == "__main__":
 	np.save(args.output_dir+'/singular.npy', algorithm.singular_values)
 
 	print('SVD Singular Values')
-	for i in range(dataset.num_classes):
-		print('Class %d' %(i))
-		print('Values: {0}, Mean: {1}'.format(algorithm.singular_values[i],torch.mean(algorithm.singular_values[i])))
+	if len(algorithm.singular_values) != 2:
+		algorithm.singular_values = [algorithm.singular_values]
+	for singular_values in algorithm.singular_values:
+		for i in range(dataset.num_classes):
+			print('Class %d' %(i))
+			print('Values: {0}'.format(singular_values[i].numpy()))
 
 	print('Mutual Information')
-	for i in range(len(dataset)):
-		for j in range(i,len(dataset)):
-			d = mutual_information(algorithm,eval_loaders[i], eval_loaders[j])
-			print('(%d, %d): %f'%(i,j,d))
+	for featurizer in algorithm.networks:
+		for i in range(len(dataset)):
+			for j in range(i,len(dataset)):
+				d = mutual_information(featurizer,eval_loaders[i], eval_loaders[j])
+				print('(%d, %d): %f'%(i,j,d))
 
 	print('Mutual Information per Class')
-	for i in range(len(dataset)):
-		for j in range(i,len(dataset)):
-			d = mutual_information_per_class(algorithm,eval_loaders[i], eval_loaders[j])
-			labels = ['(D%d, D%d, C%d)' % (i,j,c) for c in range(len(d))]
+	for featurizer in algorithm.networks:
+		for i in range(len(dataset)):
+			for j in range(i,len(dataset)):
+				d = mutual_information_per_class(featurizer, algorithm.num_classes,eval_loaders[i], eval_loaders[j])
+				labels = ['(D%d, D%d, C%d)' % (i,j,c) for c in range(len(d))]
 			misc.print_row(labels, colwidth=12)
 			misc.print_row(d, colwidth=12)
