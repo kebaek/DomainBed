@@ -24,7 +24,7 @@ ALGORITHMS = [
 	'MLDG',
 	'MMD',
 	'CORAL'
-	'MCR'
+	'MCR',
     'Union'
 ]
 
@@ -70,7 +70,7 @@ class ERM(Algorithm):
 	"""
 
 	def __init__(self, input_shape, num_classes, num_domains, hparams):
-		super(ERMCR, self).__init__(input_shape, num_classes, num_domains,
+		super(ERM, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
 		self.classifier = nn.Linear(hparams['fd'], num_classes)
@@ -99,7 +99,7 @@ class ERM(Algorithm):
 			all_x = torch.cat([x for x,y in minibatches])
 			all_y = torch.cat([y for x,y in minibatches])
 			all_z = self.featurizer(all_x).cuda()
-			ce = F.cross_entropy(self.classifier(all_x), all_y)
+			ce = F.cross_entropy(self.classifier(all_z), all_y)
 			loss = ce
 			if self.beta != 0:
 				mi = 0
@@ -110,11 +110,11 @@ class ERM(Algorithm):
 					X, Y = [],[]
 					for i,(x,y) in enumerate(minibatches):
 						z_domain = all_z[j:j+len(y)][y == c]
-						X.append(z_domain.cpu())
+						X.append(z_domain)
 						Y += [i for _ in range(len(z_domain))]
 						j += len(y)
 					X, Y = torch.cat(X, 0), torch.tensor(Y)
-					mi += -self.cmi(X,Y, self.num_domains)
+					mi += -self.cmi(X,Y, self.num_domains)[0]
 				loss += self.beta*mi
 
 			self.optimizer.zero_grad()

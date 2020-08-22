@@ -44,7 +44,6 @@ if __name__ == "__main__":
 
 	## MCR ##
 	parser.add_argument('--fd', type=int, default=0)
-	parser.add_argument('--n_comp', type=int, default=0)
 	parser.add_argument('--beta', type=float, default=100)
 	args = parser.parse_args()
 
@@ -68,13 +67,15 @@ if __name__ == "__main__":
 	if args.hparams:
 		hparams.update(json.loads(args.hparams))
 
-	if args.fd:
+	if args.fd !=0:
 		hparams['fd']=args.fd
 	if args.beta != 100:
 		hparams['beta'] = args.beta
-	if args.n_comp:
-		hparams['n_comp'] = args.n_comp
-
+	if args.dataset == 'rotatedMNIST':
+		num_classes = 10.0
+	if args.dataset == 'PACS':
+		num_classes = 7.0
+	hparams['n_comp'] = int(hparams['fd']/num_classes)
 	print('HParams:')
 	for k, v in sorted(hparams.items()):
 		print('\t{}: {}'.format(k, v))

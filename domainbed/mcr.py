@@ -53,9 +53,9 @@ class MaximalCodingRateReduction(torch.nn.Module):
 
     def forward(self, X, Y, num_classes=None):
         if num_classes is None:
-            num_classes = Y.max() + 1
+            num_classes = (Y.max() + 1).cpu()
         W = X.T
-        Pi = label_to_membership(Y.cpu().numpy(), num_classes.cpu())
+        Pi = label_to_membership(Y.cpu().numpy(), num_classes)
         Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
 
         discrimn_loss_empi = self.compute_discrimn_loss_empirical(W)
@@ -68,7 +68,6 @@ class MutualInformation(torch.nn.Module):
     def __init__(self, eps=0.01):
         super(MutualInformation, self).__init__()
         self.eps = eps
-        self.
 
     def forward(self, D1, D2):
         z = torch.cat((D1,D2), 0)
