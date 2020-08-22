@@ -170,23 +170,24 @@ class MCR(Algorithm):
 			self.svd(p, all_y)
 			return None
 		else:
-			p = self.featurizer(torch.cat([x for x,y in minibatches]))
+			all_z = self.featurizer(torch.cat([x for x,y in minibatches]))
 			all_y = torch.cat([y for x,y in minibatches])
-			mcr, loss_empi, loss_theo = self.criterion(p, all_y)
+			mcr, loss_empi, loss_theo = self.criterion(all_z, all_y)
+			loss = mcr
 
-			mi, j = 0,0
-			dict = [{} for _ in range(self.num_classes)]
-			for i,(x,y) in enumerate(minibatches):
+			if self.beta != 0:
+				mi = 0
 				for c in range(self.num_classes):
-					z_domain = p[j:j+len(y)]
-					dict[i][c] = z_domain[y == c].cpu()
-				j += len(y)
-			for i in range(self.num_domains):
-				for j in range(i+1, self.num_domains):
-					for c in range(self.num_classes):
-						mi += self.cmi(dict[i][c],dict[j][c])
-
-			loss = mcr + self.beta*mi
+					j = 0
+					X, Y = [],[]
+					for i,(x,y) in enumerate(minibatches):
+						z_domain = all_z[j:j+len(y)][y == c]
+						X.append(z_domain)
+						Y += [i for _ in range(len(z_domain))]
+						j += len(y)
+					X, Y = torch.cat(X, 0), torch.tensor(Y)
+					mi += -self.cmi(X,Y, self.num_domains)[0]
+				loss += self.beta*mi
 
 			self.optimizer.zero_grad()
 			loss.backward()
@@ -246,7 +247,7 @@ class Union(Algorithm):
 		self.components = [{}, {}]
 		self.singular_values = [{}, {}]
 		self.beta = hparams['beta']
-		self.cmi = MutualInformation(eps=0.5).to(device)
+		self.cmi = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 
 	def update(self, minibatches, components=False):
 		if components:
@@ -262,26 +263,28 @@ class Union(Algorithm):
 		else:
 			losses = []
 			for f, featurizer in enumerate(self.networks):
-				p = featurizer(torch.cat([x for x,y in minibatches]))
+				all_z = featurizer(torch.cat([x for x,y in minibatches]))
 				all_y = torch.cat([y for x,y in minibatches])
-				mcr, loss_empi, loss_theo = self.criterion(p, all_y)
+				mcr, loss_empi, loss_theo = self.criterion(all_z, all_y)
+				loss = mcr
+				if self.beta != 0:
+					mi = 0
 
-				mi, j = 0,0
-				dict = [{} for _ in range(self.num_domains)]
-				for i,(x,y) in enumerate(minibatches):
 					for c in range(self.num_classes):
-						z_domain = p[j:j+len(y)]
-						dict[i][c] = z_domain[y == c].cpu()
-					j += len(y)
-				for i in range(self.num_domains):
-					for j in range(i+1, self.num_domains):
-						for c in range(self.num_classes):
-							mi += self.cmi(dict[i][c],dict[j][c])
+						j = 0
+						X, Y = [],[]
+						for i,(x,y) in enumerate(minibatches):
+							z_domain = all_z[j:j+len(y)][y == c]
+							X.append(z_domain)
+							Y += [i for _ in range(len(z_domain))]
+							j += len(y)
+						X, Y = torch.cat(X, 0), torch.tensor(Y)
+						mi += -self.cmi(X,Y, self.num_domains)[0]
+					if f == 0:
+						loss += self.beta*mi
+					else:
+						loss -= self.beta*mi
 
-				if f == 0:
-				    loss = mcr + self.beta*mi
-				else:
-				    loss = loss = mcr - self.beta*mi
 				self.optimizers[f].zero_grad()
 				loss.backward()
 				self.optimizers[f].step()
