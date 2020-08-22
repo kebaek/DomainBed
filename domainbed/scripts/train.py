@@ -41,6 +41,11 @@ if __name__ == "__main__":
 	parser.add_argument('--test_envs', type=int, nargs='+', default=[0])
 	parser.add_argument('--output_dir', type=str, default="train_output")
 	parser.add_argument('--holdout_fraction', type=float, default=0.2)
+
+	## MCR ##
+	parser.add_argument('--fd', type=int, default=0)
+	parser.add_argument('--n_comp', type=int, default=0)
+	parser.add_argument('--beta', type=float, default=100)
 	args = parser.parse_args()
 
 	# If we ever want to implement checkpointing, just persist these values
@@ -62,6 +67,13 @@ if __name__ == "__main__":
 			misc.seed_hash(args.hparams_seed, args.trial_seed))
 	if args.hparams:
 		hparams.update(json.loads(args.hparams))
+
+	if args.fd:
+		hparams['fd']=args.fd
+	if args.beta != 100:
+		hparams['beta'] = args.beta
+	if args.n_comp:
+		hparams['n_comp'] = args.n_comp
 
 	print('HParams:')
 	for k, v in sorted(hparams.items()):
@@ -141,13 +153,11 @@ if __name__ == "__main__":
 	m = 0
 	for step in range(start_step, n_steps):
 		step_start_time = time.time()
+
 		minibatches_device = [(x.to(device), y.to(device))
 			for x,y in next(train_minibatches_iterator)]
-		#if args.algorithm == 'ERMCR':
-		#	all_loaders = [eval_loaders[len(in_splits) + i] for i in range(len(out_splits)) if i not in args.test_envs]
-		#	step_vals = algorithm.update(minibatches_device, loaders = all_loaders)
-		#else:
 		step_vals = algorithm.update(minibatches_device)
+
 		if step % args.checkpoint_freq == 0:
 			all_data = chain(*eval_loaders[:len(in_splits)])
 			algorithm.update(all_data, components=True)

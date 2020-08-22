@@ -63,9 +63,10 @@ class ResNet50(torch.nn.Module):
         x = self.network.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.dropout(x)
-        x = self.reshape(x)
-        return F.normalize(x)
-        #return x	
+        #x = self.reshape(x)
+        #return F.normalize(x)
+        return x
+
     def train(self, mode=True):
         """
         Override the default train() to freeze the BN parameters
@@ -122,8 +123,9 @@ class MNIST_CNN(nn.Module):
         x = F.relu(x)
         x = self.bn3(x)
         x = x.mean(dim=(2,3))
-        x = self.reshape(x)
-        return F.normalize(x)
+        #x = self.reshape(x)
+        #return F.normalize(x)
+        return x
 
 def Featurizer(input_shape, hparams):
     """Auto-select an appropriate featurizer for the given input shape."""

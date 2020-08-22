@@ -25,7 +25,6 @@ ALGORITHMS = [
 	'MMD',
 	'CORAL'
 	'MCR'
-	'ERMCR'
     'Union'
 ]
 
@@ -67,13 +66,13 @@ class Algorithm(torch.nn.Module):
 
 class ERM(Algorithm):
 	"""
-	Empirical Risk Minimization (ERM)
+	Cross Entropy + Conditional Mutual Info (ERM + MCR)
 	"""
 
 	def __init__(self, input_shape, num_classes, num_domains, hparams):
-		super(ERM, self).__init__(input_shape, num_classes, num_domains,
+		super(ERMCR, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
-		self.featurizer = networks.Featurizer(input_shape, self.hparams)
+		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
 		self.classifier = nn.Linear(hparams['fd'], num_classes)
 		self.network = nn.Sequential(self.featurizer, self.classifier)
 		self.optimizer = torch.optim.Adam(
@@ -81,7 +80,8 @@ class ERM(Algorithm):
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
-		self.num_classes = num_classes
+		self.beta = hparams['beta']
+		self.cmi = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
 
@@ -98,91 +98,24 @@ class ERM(Algorithm):
 		else:
 			all_x = torch.cat([x for x,y in minibatches])
 			all_y = torch.cat([y for x,y in minibatches])
-			loss = F.cross_entropy(self.predict(all_x), all_y)
-
-			self.optimizer.zero_grad()
-			loss.backward()
-			self.optimizer.step()
-
-			return {'loss': loss.item()}
-
-	def svd(self, x, y):
-		sorted_data = [[] for _ in range(self.num_classes)]
-		for i, lbl in enumerate(y):
-			sorted_data[lbl].append(x[i])
-		sorted_data = [torch.stack(class_data).cpu() for class_data in sorted_data]
-
-		for j in range(self.num_classes):
-			u,s,vt = torch.svd(sorted_data[j])
-			self.components[j] = vt.t()[:self.hparams['n_comp']]
-			self.singular_values[j] = s[:self.hparams['n_comp']]
-
-	def predict(self, x):
-		return self.network(x)
-
-class ERMCR(Algorithm):
-	"""
-	Cross Entropy + Conditional Mutual Info (ERM + MCR)
-	"""
-
-	def __init__(self, input_shape, num_classes, num_domains, hparams):
-		super(ERMCR, self).__init__(input_shape, num_classes, num_domains,
-								  hparams)
-		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-		self.classifier = nn.Linear(hparams['fd'], num_classes)
-		self.network = nn.Sequential(self.featurizer, self.classifier)
-		self.optimizer = torch.optim.Adam(
-			self.network.parameters(),
-			lr=self.hparams["lr"],
-			weight_decay=self.hparams['weight_decay']
-		)
-		self.beta = hparams['beta']
-		self.cmi = MutualInformation(eps=0.5).to(device)
-		self.components = {}
-		self.singular_values = {}
-
-	def update(self, minibatches, components=False, loaders=None):
-		if components:
-			p = []
-			all_y = []
-			for x,y in minibatches:
-				p.append(self.featurizer(x.cuda()).cpu().detach())
-				all_y.append(y)
-			p, all_y = torch.cat(p), torch.cat(all_y)
-			self.svd(p, all_y)
-			return None
-		else:
-			all_x = torch.cat([x for x,y in minibatches])
-			all_y = torch.cat([y for x,y in minibatches])
-			ce = F.cross_entropy(self.predict(all_x), all_y)
-
-			'''
-			dict = [{} for _ in range(self.num_domains)]
-			for i, loader in enumerate(loaders):
-				all_z = []
-				all_y = []
-				for step, (x,y) in enumerate(loader):
-					all_z.append(self.featurizer(x).cpu())
-					all_y.append(y)
-				all_z, all_y = torch.cat(all_z), torch.cat(all_y)
-
-				for c in range(self.num_classes):
-					dict[i][c] = all_z[all_y == c].cpu()
-			'''
 			all_z = self.featurizer(all_x).cuda()
-			mi, j = 0,0
-			dict = [{} for _ in range(self.num_domains)]
-			for i,(x,y) in enumerate(minibatches):
-				for c in range(self.num_classes):
-					z_domain = all_z[j:j+len(y)]
-					dict[i][c] = z_domain[y == c].cpu()
-				j += len(x)
-			for i in range(self.num_domains):
-				for j in range(i+1, self.num_domains):
-					for c in range(self.num_classes):
-						mi += self.cmi(dict[i][c],dict[j][c])
+			ce = F.cross_entropy(self.classifier(all_x), all_y)
+			loss = ce
+			if self.beta != 0:
+				mi = 0
+				all_z = F.normalize(all_z)
 
-			loss = ce + self.beta*mi
+				for c in range(self.num_classes):
+					j = 0
+					X, Y = [],[]
+					for i,(x,y) in enumerate(minibatches):
+						z_domain = all_z[j:j+len(y)][y == c]
+						X.append(z_domain.cpu())
+						Y += [i for _ in range(len(z_domain))]
+						j += len(y)
+					X, Y = torch.cat(X, 0), torch.tensor(Y)
+					mi += -self.cmi(X,Y, self.num_domains)
+				loss += self.beta*mi
 
 			self.optimizer.zero_grad()
 			loss.backward()
@@ -224,7 +157,7 @@ class MCR(Algorithm):
 		self.components = {}
 		self.singular_values = {}
 		self.beta = hparams['beta']
-		self.cmi = MutualInformation(eps=0.5).to(device)
+		self.cmi = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 
 	def update(self, minibatches, components=False):
 		if components:
@@ -242,7 +175,7 @@ class MCR(Algorithm):
 			mcr, loss_empi, loss_theo = self.criterion(p, all_y)
 
 			mi, j = 0,0
-			dict = [{} for _ in range(self.num_domains)]
+			dict = [{} for _ in range(self.num_classes)]
 			for i,(x,y) in enumerate(minibatches):
 				for c in range(self.num_classes):
 					z_domain = p[j:j+len(y)]
@@ -332,7 +265,7 @@ class Union(Algorithm):
 				p = featurizer(torch.cat([x for x,y in minibatches]))
 				all_y = torch.cat([y for x,y in minibatches])
 				mcr, loss_empi, loss_theo = self.criterion(p, all_y)
-	
+
 				mi, j = 0,0
 				dict = [{} for _ in range(self.num_domains)]
 				for i,(x,y) in enumerate(minibatches):
@@ -354,7 +287,7 @@ class Union(Algorithm):
 				self.optimizers[f].step()
 
 				losses.append(loss.item())
-	
+
 			return {'loss1': losses[0], 'loss2': losses[1]}
 
 
@@ -375,7 +308,7 @@ class Union(Algorithm):
 		for j in range(self.num_classes):
 			score_svd_j = 0
 			for i in range(2):
-				f = self.networks[i](x)	
+				f = self.networks[i](x)
 				svd_j = torch.matmul(torch.matmul(F.normalize(self.singular_values[i][j], dim=0)*self.components[i][j].t(),self.components[i][j]).to(device),f.t().to(device))
 				score_svd_j += torch.norm(svd_j, dim=0)
 			scores_svd.append(score_svd_j)

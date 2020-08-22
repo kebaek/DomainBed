@@ -60,18 +60,15 @@ class MaximalCodingRateReduction(torch.nn.Module):
 
         discrimn_loss_empi = self.compute_discrimn_loss_empirical(W)
         compress_loss_empi = self.compute_compress_loss_empirical(W, Pi)
-        #discrimn_loss_theo = self.compute_discrimn_loss_theoretical(W)
-        #compress_loss_theo = self.compute_compress_loss_theoretical(W, Pi)
 
         total_loss_empi = (self.gam2 * -discrimn_loss_empi + compress_loss_empi)
         return (total_loss_empi,0,0)
-          #      [discrimn_loss_empi.item(), compress_loss_empi.item()],
-           #     [discrimn_loss_theo.item(), compress_loss_theo.item()])
 
 class MutualInformation(torch.nn.Module):
     def __init__(self, eps=0.01):
         super(MutualInformation, self).__init__()
         self.eps = eps
+        self.
 
     def forward(self, D1, D2):
         z = torch.cat((D1,D2), 0)
