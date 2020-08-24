@@ -71,7 +71,7 @@ if __name__ == "__main__":
 		hparams['fd']=args.fd
 	if args.beta != 100:
 		hparams['beta'] = args.beta
-	if args.dataset == 'rotatedMNIST':
+	if args.dataset == 'RotatedMNIST':
 		num_classes = 10.0
 	if args.dataset == 'PACS':
 		num_classes = 7.0
