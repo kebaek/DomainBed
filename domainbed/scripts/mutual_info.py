@@ -241,7 +241,7 @@ if __name__ == "__main__":
 			for j in range(i,len(dataset)):
 				d = mutual_information(featurizer,eval_loaders[i], eval_loaders[j])
 				print('(%d, %d): %f'%(i,j,d))
-
+'''
 	print('Mutual Information per Class')
 	for featurizer in algorithm.networks:
 		for i in range(len(dataset)):

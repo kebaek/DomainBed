@@ -153,6 +153,7 @@ class MCR(Algorithm):
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
+		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=0.5, last_epoch=-1)
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
@@ -173,7 +174,7 @@ class MCR(Algorithm):
 			all_y = torch.cat([y for x,y in minibatches])
 			mcr, loss_empi, loss_theo = self.criterion(all_z, all_y, self.num_classes)
 			loss = mcr
-			mi = torch.tensor(0)
+			mi = torch.tensor(0, dtype=torch.float32).cuda()
 			if self.beta != 0:
 				for c in range(self.num_classes):
 					j = 0
@@ -185,12 +186,12 @@ class MCR(Algorithm):
 						j += len(y)
 					X, Y = torch.cat(X, 0), torch.tensor(Y)
 					mi += -self.criterion(X,Y, self.num_domains)[0]
-				loss += self.beta*mi
+				loss +=self.beta*mi
 
 			self.optimizer.zero_grad()
 			loss.backward()
 			self.optimizer.step()
-
+			self.scheduler.step()
 			return {'loss': loss.item(), 'mcr': mcr.item(), 'mi': self.beta*mi.item()}
 
 
