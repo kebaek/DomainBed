@@ -1,0 +1,297 @@
+Args:
+	algorithm: MCR
+	beta: 0.001
+	checkpoint_freq: None
+	data_dir: data
+	dataset: PACS
+	fd: 0
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/pacs/mcr/beta_tests/b0.001
+	seed: 0
+	steps: None
+	test_envs: [0]
+	trial_seed: 0
+HParams:
+	batch_size: 64
+	beta: 0.001
+	class_balanced: True
+	fd: 128
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 8e-05
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 18
+	resnet_dropout: 0.0
+	weight_decay: 0.0
+Args:
+	algorithm: MCR
+	beta: 0.001
+	checkpoint_freq: None
+	data_dir: data
+	dataset: PACS
+	fd: 42
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/pacs/mcr/beta_tests/b0.001
+	seed: 0
+	steps: None
+	test_envs: [0]
+	trial_seed: 0
+HParams:
+	batch_size: 64
+	beta: 0.001
+	class_balanced: True
+	fd: 42
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 8e-05
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 6
+	resnet_dropout: 0.0
+	weight_decay: 0.0
+Args:
+	algorithm: MCR
+	beta: 0.001
+	checkpoint_freq: None
+	data_dir: data
+	dataset: PACS
+	fd: 42
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/pacs/mcr/beta_tests/b0.001
+	seed: 0
+	steps: None
+	test_envs: [0]
+	trial_seed: 0
+HParams:
+	batch_size: 64
+	beta: 0.001
+	class_balanced: True
+	decay: 1000
+	fd: 42
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 8e-05
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 6
+	resnet_dropout: 0.0
+	weight_decay: 0.0
+Args:
+	algorithm: MCR
+	beta: 0.001
+	checkpoint_freq: None
+	data_dir: data
+	dataset: PACS
+	fd: 42
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/pacs/mcr/beta_tests/b0.001
+	seed: 0
+	steps: None
+	test_envs: [0]
+	trial_seed: 0
+HParams:
+	batch_size: 64
+	beta: 0.001
+	class_balanced: True
+	decay: 1000
+	fd: 42
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 8e-05
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 6
+	resnet_dropout: 0.0
+	weight_decay: 0.0
+Args:
+	algorithm: MCR
+	beta: 0.001
+	checkpoint_freq: None
+	data_dir: data
+	dataset: PACS
+	fd: 42
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/pacs/mcr/beta_tests/b0.001
+	seed: 0
+	steps: None
+	test_envs: [0]
+	trial_seed: 0
+HParams:
+	batch_size: 64
+	beta: 0.001
+	class_balanced: True
+	decay: 1000
+	fd: 42
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 8e-05
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 6
+	resnet_dropout: 0.0
+	weight_decay: 0.0
+Args:
+	algorithm: MCR
+	beta: 0.001
+	checkpoint_freq: None
+	data_dir: data
+	dataset: PACS
+	fd: 42
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/pacs/mcr/beta_tests/b0.001
+	seed: 0
+	steps: None
+	test_envs: [0]
+	trial_seed: 0
+HParams:
+	batch_size: 64
+	beta: 0.001
+	class_balanced: True
+	decay: 1000
+	fd: 42
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 8e-05
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 6
+	resnet_dropout: 0.0
+	weight_decay: 0.0
+Args:
+	algorithm: MCR
+	beta: 0.001
+	checkpoint_freq: None
+	data_dir: data
+	dataset: PACS
+	fd: 42
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/pacs/mcr/beta_tests/b0.001
+	seed: 0
+	steps: None
+	test_envs: [0]
+	trial_seed: 0
+HParams:
+	batch_size: 64
+	beta: 0.001
+	class_balanced: True
+	decay: 1000
+	fd: 42
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 5e-05
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 6
+	resnet_dropout: 0.0
+	weight_decay: 0.0
+saved at step 0
+env0_in_acc   env0_out_acc  env1_in_acc   env1_out_acc  env2_in_acc   env2_out_acc  env3_in_acc   env3_out_acc  epoch         loss          mcr           mi            step          step_time    
+0.5411836486  0.5183374083  0.4845415778  0.4594017094  0.8181137725  0.7934131737  0.5216284987  0.5286624204  0.0000000000  -4.041896343  -4.041896343  0.0291674175  0             16.008632659 
+saved at step 300
+0.8358755339  0.8459657702  0.9733475480  0.9679487179  0.9985029940  0.9760479042  0.9541984733  0.9159235669  300.00000000  -11.33224318  -11.33224318  0.0231464398  300           0.9815530825 
+saved at step 600
+0.8425869433  0.8484107579  0.9834754797  0.9615384615  0.9992514970  0.9790419162  0.9723282443  0.9363057325  600.00000000  -13.11467801  -13.11467801  0.0199089954  600           1.0243774557 
+0.8120805369  0.8141809291  0.9781449893  0.9380341880  0.9970059880  0.9700598802  0.9691475827  0.9235668790  900.00000000  -13.40130533  -13.40130533  0.0197494492  900           1.0230955100 
+Args:
+	algorithm: MCR
+	beta: 0.001
+	checkpoint_freq: None
+	data_dir: data
+	dataset: PACS
+	fd: 42
+	holdout_fraction: 0.2
+	hparams: None
+	hparams_seed: 0
+	output_dir: output/pacs/mcr/beta_tests/b0.001
+	seed: 0
+	steps: None
+	test_envs: [0]
+	trial_seed: 0
+HParams:
+	batch_size: 64
+	beta: 0.001
+	class_balanced: True
+	decay: 1000
+	fd: 42
+	groupdro_eta: 0.01
+	irm_lambda: 100.0
+	irm_penalty_anneal_iters: 500
+	lr: 5e-05
+	mixup_alpha: 0.2
+	mldg_beta: 1.0
+	mlp_depth: 3
+	mlp_dropout: 0.0
+	mlp_width: 256
+	mmd_gamma: 1.0
+	n_comp: 6
+	resnet_dropout: 0.0
+	weight_decay: 0.0
+saved at step 0
+env0_in_acc   env0_out_acc  env1_in_acc   env1_out_acc  env2_in_acc   env2_out_acc  env3_in_acc   env3_out_acc  epoch         loss          mcr           mi            step          step_time    
+0.5411836486  0.5183374083  0.4845415778  0.4594017094  0.8181137725  0.7934131737  0.5216284987  0.5286624204  0.0000000000  -4.041900157  -4.041900157  0.0291674194  0             25.921912431 
+saved at step 300
+0.8749237340  0.8777506112  0.9664179104  0.9487179487  1.0000000000  0.9700598802  0.9468829517  0.9095541401  300.00000000  -11.35195398  -11.35195398  0.0229717300  300           2.1151947673 
+saved at step 600
+0.8578401464  0.8655256724  0.9845415778  0.9594017094  1.0000000000  0.9850299401  0.9739185751  0.9464968153  600.00000000  -13.11505284  -13.11505284  0.0196078106  600           2.2468345451 
+0.8242830995  0.8361858191  0.9813432836  0.9594017094  0.9970059880  0.9610778443  0.9666030534  0.9337579618  900.00000000  -13.38199379  -13.38199379  0.0193719524  900           1.8730823763 
+saved at step 1200
+0.8340451495  0.8361858191  0.9962686567  0.9743589744  0.9992514970  0.9820359281  0.9847328244  0.9554140127  1200.0000000  -13.61890419  -13.61890419  0.0191457386  1200          2.2987707138 
+0.8370957901  0.8386308068  0.9962686567  0.9594017094  1.0000000000  0.9790419162  0.9939567430  0.9605095541  1500.0000000  -13.79194377  -13.79194377  0.0188160738  1500          1.9354983139 
+0.8657718121  0.8533007335  0.9973347548  0.9764957265  1.0000000000  0.9640718563  0.9917302799  0.9452229299  1800.0000000  -13.82150795  -13.82150795  0.0185597570  1800          2.2986902555 
+0.8700427090  0.8606356968  0.9989339019  0.9658119658  0.9992514970  0.9700598802  0.9965012723  0.9566878981  2100.0000000  -13.87615570  -13.87615570  0.0181202638  2100          1.8844851987 
+0.8535692495  0.8581907090  1.0000000000  0.9722222222  1.0000000000  0.9730538922  0.9933206107  0.9426751592  2400.0000000  -13.91246924  -13.91246924  0.0179764082  2400          2.1895766354 
+0.8590604027  0.8606356968  0.9994669510  0.9572649573  1.0000000000  0.9820359281  0.9958651399  0.9566878981  2700.0000000  -13.93023578  -13.93023578  0.0178399035  2700          1.9805558356 
+0.8523489933  0.8557457213  1.0000000000  0.9615384615  1.0000000000  0.9850299401  0.9926844784  0.9312101911  3000.0000000  -13.93043720  -13.93043720  0.0175634973  3000          2.1336096303 
+0.8669920683  0.8630806846  0.9994669510  0.9679487179  1.0000000000  0.9790419162  0.9977735369  0.9490445860  3300.0000000  -13.96348859  -13.96348859  0.0175204998  3300          2.0340204748 
+0.8694325808  0.8679706601  0.9994669510  0.9615384615  1.0000000000  0.9790419162  0.9984096692  0.9554140127  3600.0000000  -13.96715343  -13.96715343  0.0173962755  3600          1.9326324240 
+0.8724832215  0.8533007335  0.9989339019  0.9572649573  1.0000000000  0.9850299401  0.9984096692  0.9566878981  3900.0000000  -13.97867864  -13.97867864  0.0173501605  3900          2.2822988709 
