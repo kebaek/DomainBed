@@ -75,6 +75,7 @@ class ERM(Algorithm):
 		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
 		self.classifier = nn.Linear(hparams['fd'], num_classes)
 		self.network = nn.Sequential(self.featurizer, self.classifier)
+		self.networks = [self.featurizer]
 		self.optimizer = torch.optim.Adam(
 			self.network.parameters(),
 			lr=self.hparams["lr"],
@@ -121,7 +122,7 @@ class ERM(Algorithm):
 			loss.backward()
 			self.optimizer.step()
 
-			return {'loss': loss.item(), 'ce': ce.item(), 'mi': self.beta*mi.item()}
+			return {'loss': loss.item(), 'ce': ce.item(), 'mi': mi.item()}
 
 	def svd(self, x, y):
 		sorted_data = [[] for _ in range(self.num_classes)]
@@ -186,13 +187,13 @@ class MCR(Algorithm):
 						j += len(y)
 					X, Y = torch.cat(X, 0), torch.tensor(Y)
 					mi += -self.criterion(X,Y, self.num_domains)[0]
-				loss +=self.beta*mi
+				loss = mcr + self.beta*mi
 
 			self.optimizer.zero_grad()
 			loss.backward()
 			self.optimizer.step()
 			self.scheduler.step()
-			return {'loss': loss.item(), 'mcr': mcr.item(), 'mi': self.beta*mi.item()}
+			return {'loss': loss.item(), 'mcr': mcr.item(), 'mi':mi.item()}
 
 
 	def svd(self, x, y):
@@ -205,7 +206,7 @@ class MCR(Algorithm):
 			u,s,vt = torch.svd(sorted_data[j])
 			self.components[j] = vt.t()[:self.hparams['n_comp']]
 			self.singular_values[j] = s[:self.hparams['n_comp']]
-
+		return self.singular_values
 
 	def svm(self,x,y):
 		self.components = LinearSVC(verbose=0, random_state=10)
@@ -246,12 +247,12 @@ class Union(Algorithm):
 		self.components = [{}, {}]
 		self.singular_values = [{}, {}]
 		self.beta = hparams['beta']
-		self.cmi = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
+		self.schedulers = [torch.optim.lr_scheduler.StepLR(self.optimizers[0], hparams['decay'], gamma=0.5, last_epoch=-1),torch.optim.lr_scheduler.StepLR(self.optimizers[1], hparams['decay'], gamma=0.5, last_epoch=-1)]
 
 	def update(self, minibatches, components=False):
 		if components:
+			p, all_y = [[], []], [[], []]
 			for x,y in minibatches:
-				p, all_y = [[], []], [[], []]
 				for i, featurizer in enumerate(self.networks):
 					p[i].append(featurizer(x.cuda()).cpu().detach())
 					all_y[i].append(y)
@@ -278,15 +279,16 @@ class Union(Algorithm):
 							Y += [i for _ in range(len(z_domain))]
 							j += len(y)
 						X, Y = torch.cat(X, 0), torch.tensor(Y)
-						mi += -self.cmi(X,Y, self.num_domains)[0]
+						mi += -self.criterion(X,Y, self.num_domains)[0]
 					if f == 0:
-						loss += self.beta*mi
+						loss = mcr +  self.beta*mi
 					else:
-						loss -= self.beta*mi
+						loss = mcr -  self.beta*mi
 
 				self.optimizers[f].zero_grad()
 				loss.backward()
 				self.optimizers[f].step()
+				self.schedulers[f].step()
 
 				losses.append(loss.item())
 
@@ -303,7 +305,7 @@ class Union(Algorithm):
 			u,s,vt = torch.svd(sorted_data[j])
 			self.components[f][j] = vt.t()[:self.hparams['n_comp']]
 			self.singular_values[f][j] = s[:self.hparams['n_comp']]
-
+		return self.singular_values[f]
 
 	def predict(self, x):
 		scores_svd = []
