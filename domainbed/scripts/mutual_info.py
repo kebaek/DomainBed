@@ -64,9 +64,9 @@ def mutual_information(featurizer, class1, class2):
 	c1 = torch.cat([featurizer(x.cuda()).cpu().detach() for x,y in class1])
 	c2 = torch.cat([featurizer(x.cuda()).cpu().detach() for x,y in class2])
 	z = torch.cat((c1,c2), 0)
-	c1 = F.normalize(c1 - torch.mean(c1, 0))
-	c2 = F.normalize(c2 - torch.mean(c2, 0))
-	z = F.normalize(z - torch.mean(z, 0))
+	c1 = F.normalize(c1)
+	c2 = F.normalize(c2)
+	z = F.normalize(z)
 	m,p = z.shape
 	m1, _ = c1.shape
 	m2, _ = c2.shape
@@ -159,7 +159,11 @@ if __name__ == "__main__":
 			args.test_envs, hparams)
 	else:
 		raise NotImplementedError
-
+	if args.dataset == 'RotatedMNIST':
+		num_classes = 10.0
+	if args.dataset == 'PACS':
+		num_classes = 7.0
+	hparams['n_comp'] = int(hparams['fd']/num_classes)
 	# Split each env into an 'in-split' and an 'out-split'. We'll train on
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
@@ -211,16 +215,18 @@ if __name__ == "__main__":
 
 	np.save(args.output_dir+'/components.npy', algorithm.components)
 	np.save(args.output_dir+'/singular.npy', algorithm.singular_values)
-
+	'''
 	print('SVD Singular Values')
 	if len(algorithm.singular_values) != 2:
-		algorithm.singular_values = [algorithm.singular_values]
-	for singular_values in algorithm.singular_values:
+		sg = [algorithm.singular_values]
+	else:
+		sg = algorithm.singular_values
+	for singular_values in sg:
 		for i in range(dataset.num_classes):
 			print('Class %d' %(i))
 			print('Values: {0}'.format(singular_values[i].numpy()))
-
 	print('SVD by Domain')
+	count = 0
 	for featurizer in algorithm.networks:
 		for i in range(len(in_splits)):
 			p = []
@@ -230,17 +236,22 @@ if __name__ == "__main__":
 				p.append(featurizer(x.cuda()).cpu().detach())
 				all_y.append(y)
 			p, all_y = torch.cat(p), torch.cat(all_y)
-		components, singular_values = self.svd(p, all_y)
-		for c, sg in enumerate(singular_values):
-			print('Domain %d, Class %d' %(i,c))
-			print('Values: {0}'.format(sg[c].numpy()))
-
+			if len(algorithm.networks) > 1:
+				sg = algorithm.svd(p, all_y, count)
+			else:
+				sg = algorithm.svd(p, all_y)
+			for c in sg:
+				print('Domain %d, Class %d' %(i,c))
+				print('Values: {0}'.format(sg[c].numpy()))
+		count += 1
+	'''
 	print('Mutual Information')
 	for featurizer in algorithm.networks:
 		for i in range(len(dataset)):
-			for j in range(i,len(dataset)):
+			for j in range(i+1,len(dataset)):
 				d = mutual_information(featurizer,eval_loaders[i], eval_loaders[j])
 				print('(%d, %d): %f'%(i,j,d))
+
 '''
 	print('Mutual Information per Class')
 	for featurizer in algorithm.networks:
@@ -250,3 +261,4 @@ if __name__ == "__main__":
 				labels = ['(D%d, D%d, C%d)' % (i,j,c) for c in range(len(d))]
 			misc.print_row(labels, colwidth=12)
 			misc.print_row(d, colwidth=12)
+'''
