@@ -26,6 +26,7 @@ ALGORITHMS = [
 	'CORAL'
 	'MCR',
     'Union'
+	'MCRI'
 ]
 
 if torch.cuda.is_available():
@@ -318,6 +319,91 @@ class Union(Algorithm):
 			scores_svd.append(score_svd_j)
 		p = torch.argmax(torch.stack(scores_svd), dim=0)
 		return F.one_hot(p, self.num_classes)
+
+class MCRI(Algorithm):
+	"""
+	Maximal Coding Rate Reduction Individual Domain (MCRI)
+	"""
+
+	def __init__(self, input_shape, num_classes, num_domains, hparams):
+		super(MCRI, self).__init__(input_shape, num_classes, num_domains,
+								  hparams)
+		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
+		self.network = self.featurizer
+		self.networks = [self.featurizer]
+		self.optimizer = torch.optim.Adam(
+			self.featurizer.parameters(),
+			lr=self.hparams["lr"],
+			weight_decay=self.hparams['weight_decay']
+		)
+		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=0.5, last_epoch=-1)
+		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
+		self.components = {}
+		self.singular_values = {}
+		self.beta = hparams['beta']
+
+	def update(self, minibatches, components=False):
+		if components:
+			p = []
+			all_y = []
+			for x,y in minibatches:
+				p.append(self.featurizer(x.cuda()).cpu().detach())
+				all_y.append(y)
+			p, all_y = torch.cat(p), torch.cat(all_y)
+			self.svd(p, all_y)
+			return None
+		else:
+			loss = torch.tensor(0, dtype=torch.float32).cuda()
+			mi = torch.tensor(0, dtype=torch.float32).cuda()
+			all_z = []
+			all_y = []
+			for x,y in minibatches:
+				z = self.featurizer(x.cuda())
+				all_z.append(z)
+				all_y.append(y)
+				mcr, loss_empi, loss_theo = self.criterion(z, y, self.num_classes)
+				mi += mcr
+
+			all_z = torch.cat(all_z)
+			print(all_z.shape)
+			all_y = torch.cat(y)
+			mcr, loss_empi, loss_theo = self.criterion(all_z, all_y, self.num_classes)
+			loss = mi + mcr
+
+			self.optimizer.zero_grad()
+			loss.backward()
+			self.optimizer.step()
+			self.scheduler.step()
+
+			return {'loss': loss.item(), 'mcr': mcr.item(), 'mi':mi.item()}
+
+
+	def svd(self, x, y):
+		sorted_data = [[] for _ in range(self.num_classes)]
+		for i, lbl in enumerate(y):
+			sorted_data[lbl].append(x[i])
+		sorted_data = [torch.stack(class_data).cpu() for class_data in sorted_data]
+
+		for j in range(self.num_classes):
+			u,s,vt = torch.svd(sorted_data[j])
+			self.components[j] = vt.t()[:self.hparams['n_comp']]
+			self.singular_values[j] = s[:self.hparams['n_comp']]
+		return self.singular_values
+
+	def svm(self,x,y):
+		self.components = LinearSVC(verbose=0, random_state=10)
+		self.components.fit(x.cpu().detach().numpy(),y.cpu().detach().numpy())
+
+	def predict(self, x, weighted=True):
+		x = self.featurizer(x)
+		scores_svd = []
+		for j in range(self.num_classes):
+			svd_j = torch.matmul(torch.matmul(F.normalize(self.singular_values[j], dim=0)*self.components[j].t(),self.components[j]).to(device),x.t().to(device))
+			score_svd_j = torch.norm(svd_j, dim=0)
+			scores_svd.append(score_svd_j)
+			p = torch.argmax(torch.stack(scores_svd), dim=0)
+		return F.one_hot(p, self.num_classes)
+
 
 class AbstractDANN(Algorithm):
 	"""Domain-Adversarial Neural Networks (abstract class)"""
