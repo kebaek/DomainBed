@@ -73,7 +73,7 @@ if __name__ == "__main__":
 	if args.beta != 100:
 		hparams['beta'] = args.beta
 	hparams['norm'] = args.norm
-        
+
 	if args.dataset == 'RotatedMNIST':
 		num_classes = 10.0
 	if args.dataset == 'PACS':
@@ -104,9 +104,12 @@ if __name__ == "__main__":
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
 	out_splits = []
+	holdout = [500,500,500]
 	for env_i, env in enumerate(dataset):
-		out, in_ = misc.split_dataset(env,
-			int(len(env)*args.holdout_fraction),
+		#out, in_ = misc.split_dataset(env,
+		in_, out = misc.split_dataset_by_class(env,
+			holdout[i],
+			#int(len(env)*args.holdout_fraction),
 			misc.seed_hash(args.trial_seed, env_i))
 		if hparams['class_balanced']:
 			in_weights = misc.make_weights_for_balanced_classes(in_)

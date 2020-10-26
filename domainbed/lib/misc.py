@@ -89,6 +89,32 @@ def split_dataset(dataset, n, seed=0):
     keys_2 = keys[n:]
     return _SplitDataset(dataset, keys_1), _SplitDataset(dataset, keys_2)
 
+def split_dataset_by_class(dataset, n, seed=0):
+    """
+    Return a pair of datasets corresponding to a random split of the given
+    dataset, with n datapoints in the first dataset and the rest in the last,
+    using the given random seed
+    """
+    assert(n <= len(dataset))
+    classes = {}
+    i = 0
+    for _, y in dataset:
+        y = int(y)
+        classes.setdefault(y, default=[])
+        classes[y].append(i)
+        i += 1
+
+    for key in classes:
+        np.random.RandomState(seed).shuffle(classes[key])
+
+    keys_1, keys_2 = [], []
+    for key in classes:
+        keys_1.append(classes[key][:n])
+        keys_2.append(classes[key][n:])
+
+    print(len(keys_1))
+    return _SplitDataset(dataset, keys_1), _SplitDataset(dataset, keys_2)
+
 def random_pairs_of_minibatches(minibatches):
     perm = torch.randperm(len(minibatches)).tolist()
     pairs = []
