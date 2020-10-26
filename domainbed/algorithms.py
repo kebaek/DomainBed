@@ -82,7 +82,6 @@ class ERM(Algorithm):
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
-		self.beta = hparams['beta']
 		self.cmi = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
@@ -104,20 +103,6 @@ class ERM(Algorithm):
 			ce = F.cross_entropy(self.classifier(all_z), all_y)
 			loss = ce
 			mi = torch.tensor(0)
-			if self.beta != 0:
-				all_z = F.normalize(all_z)
-
-				for c in range(self.num_classes):
-					j = 0
-					X, Y = [],[]
-					for i,(x,y) in enumerate(minibatches):
-						z_domain = all_z[j:j+len(y)][y == c]
-						X.append(z_domain)
-						Y += [i for _ in range(len(z_domain))]
-						j += len(y)
-					X, Y = torch.cat(X, 0), torch.tensor(Y)
-					mi += -self.cmi(X,Y, self.num_domains)[0]
-				loss += self.beta*mi
 
 			self.optimizer.zero_grad()
 			loss.backward()
@@ -155,12 +140,11 @@ class MCR(Algorithm):
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
-		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=0.5, last_epoch=-1)
+		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=hparams['beta'], last_epoch=-1)
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
-		self.beta = hparams['beta']
-
+        
 	def update(self, minibatches, components=False):
 		if components:
 			p = []
@@ -173,29 +157,18 @@ class MCR(Algorithm):
 			return None
 		else:
 			all_z = self.featurizer(torch.cat([x for x,y in minibatches]))
+			if self.hparams['norm']==2:
+				all_z = len(all_z)*all_z/torch.norm(all_z,p='fro')
 			all_y = torch.cat([y for x,y in minibatches])
 			mcr, loss_empi, loss_theo = self.criterion(all_z, all_y, self.num_classes)
 			loss = mcr
 			mi = torch.tensor(0, dtype=torch.float32).cuda()
-			if self.beta != 0:
-				for c in range(self.num_classes):
-					j = 0
-					X, Y = [],[]
-					for i,(x,y) in enumerate(minibatches):
-						z_domain = all_z[j:j+len(y)][y == c]
-						X.append(z_domain)
-						Y += [i for _ in range(len(z_domain))]
-						j += len(y)
-					X, Y = torch.cat(X, 0), torch.tensor(Y)
-					mi += -self.criterion(X,Y, self.num_domains)[0]
-				loss = mcr + self.beta*mi
 
 			self.optimizer.zero_grad()
 			loss.backward()
 			self.optimizer.step()
 			self.scheduler.step()
 			return {'loss': loss.item(), 'mcr': mcr.item(), 'mi':mi.item()}
-
 
 	def svd(self, x, y):
 		sorted_data = [[] for _ in range(self.num_classes)]
@@ -217,107 +190,10 @@ class MCR(Algorithm):
 		x = self.featurizer(x)
 		scores_svd = []
 		for j in range(self.num_classes):
-			svd_j = torch.matmul(torch.matmul(F.normalize(self.singular_values[j], dim=0)*self.components[j].t(),self.components[j]).to(device),x.t().to(device))
+			svd_j = torch.matmul(torch.matmul(torch.pow(F.normalize(self.singular_values[j], dim=0),2)*self.components[j].t(),self.components[j]).to(device),x.t().to(device))
 			score_svd_j = torch.norm(svd_j, dim=0)
 			scores_svd.append(score_svd_j)
 			p = torch.argmax(torch.stack(scores_svd), dim=0)
-		return F.one_hot(p, self.num_classes)
-
-class Union(Algorithm):
-	"""
-	Maximal Coding Rate Reduction (MCR)
-	"""
-
-	def __init__(self, input_shape, num_classes, num_domains, hparams):
-		super(Union, self).__init__(input_shape, num_classes, num_domains,
-								  hparams)
-		self.featurizer1 = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-		self.featurizer2 = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-		self.networks = [self.featurizer1, self.featurizer2]
-		self.optimizers = [torch.optim.Adam(
-			self.featurizer1.parameters(),
-			lr=self.hparams["lr"],
-			weight_decay=self.hparams['weight_decay']
-		),
-		 torch.optim.Adam(
-			self.featurizer2.parameters(),
-			lr=self.hparams["lr"],
-			weight_decay=self.hparams['weight_decay']
-		)]
-		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
-		self.components = [{}, {}]
-		self.singular_values = [{}, {}]
-		self.beta = hparams['beta']
-		self.schedulers = [torch.optim.lr_scheduler.StepLR(self.optimizers[0], hparams['decay'], gamma=0.5, last_epoch=-1),torch.optim.lr_scheduler.StepLR(self.optimizers[1], hparams['decay'], gamma=0.5, last_epoch=-1)]
-
-	def update(self, minibatches, components=False):
-		if components:
-			p, all_y = [[], []], [[], []]
-			for x,y in minibatches:
-				for i, featurizer in enumerate(self.networks):
-					p[i].append(featurizer(x.cuda()).cpu().detach())
-					all_y[i].append(y)
-			p1,p2, all_y = torch.cat(p[0]),torch.cat(p[1]), torch.cat(all_y[0])
-			self.svd(p1, all_y, 0)
-			self.svd(p2, all_y, 1)
-			return None
-		else:
-			losses = []
-			for f, featurizer in enumerate(self.networks):
-				all_z = featurizer(torch.cat([x for x,y in minibatches]))
-				all_y = torch.cat([y for x,y in minibatches])
-				mcr, loss_empi, loss_theo = self.criterion(all_z, all_y)
-				loss = mcr
-				if self.beta != 0:
-					mi = 0
-
-					for c in range(self.num_classes):
-						j = 0
-						X, Y = [],[]
-						for i,(x,y) in enumerate(minibatches):
-							z_domain = all_z[j:j+len(y)][y == c]
-							X.append(z_domain)
-							Y += [i for _ in range(len(z_domain))]
-							j += len(y)
-						X, Y = torch.cat(X, 0), torch.tensor(Y)
-						mi += -self.criterion(X,Y, self.num_domains)[0]
-					if f == 0:
-						loss = mcr +  self.beta*mi
-					else:
-						loss = mcr -  self.beta*mi
-
-				self.optimizers[f].zero_grad()
-				loss.backward()
-				self.optimizers[f].step()
-				self.schedulers[f].step()
-
-				losses.append(loss.item())
-
-			return {'loss1': losses[0], 'loss2': losses[1]}
-
-
-	def svd(self, x, y, f):
-		sorted_data = [[] for _ in range(self.num_classes)]
-		for i, lbl in enumerate(y):
-			sorted_data[lbl].append(x[i])
-		sorted_data = [torch.stack(class_data).cpu() for class_data in sorted_data]
-
-		for j in range(self.num_classes):
-			u,s,vt = torch.svd(sorted_data[j])
-			self.components[f][j] = vt.t()[:self.hparams['n_comp']]
-			self.singular_values[f][j] = s[:self.hparams['n_comp']]
-		return self.singular_values[f]
-
-	def predict(self, x):
-		scores_svd = []
-		for j in range(self.num_classes):
-			score_svd_j = 0
-			for i in range(2):
-				f = self.networks[i](x)
-				svd_j = torch.matmul(torch.matmul(F.normalize(self.singular_values[i][j], dim=0)*self.components[i][j].t(),self.components[i][j]).to(device),f.t().to(device))
-				score_svd_j += torch.norm(svd_j, dim=0)
-			scores_svd.append(score_svd_j)
-		p = torch.argmax(torch.stack(scores_svd), dim=0)
 		return F.one_hot(p, self.num_classes)
 
 class MCRI(Algorithm):
@@ -336,11 +212,10 @@ class MCRI(Algorithm):
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
-		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=0.5, last_epoch=-1)
+		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=hparams['beta'], last_epoch=-1)
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
-		self.beta = hparams['beta']
 
 	def update(self, minibatches, components=False):
 		if components:
@@ -355,18 +230,18 @@ class MCRI(Algorithm):
 		else:
 			loss = torch.tensor(0, dtype=torch.float32).cuda()
 			mi = torch.tensor(0, dtype=torch.float32).cuda()
-			all_z = []
+			all_z = self.featurizer(torch.cat([x for x,y in minibatches]))
+			if self.hparams['norm']==2:
+				all_z = len(all_z)*all_z/torch.norm(all_z,p='fro')
 			all_y = []
+			i = 0
 			for x,y in minibatches:
-				z = self.featurizer(x.cuda())
-				all_z.append(z)
-				all_y.append(y)
+				z = all_z[i:i+len(y)]
+				all_y += [y]
 				mcr, loss_empi, loss_theo = self.criterion(z, y, self.num_classes)
 				mi += mcr
-
-			all_z = torch.cat(all_z)
-			print(all_z.shape)
-			all_y = torch.cat(y)
+				i += len(y)
+			all_y = torch.cat(all_y)
 			mcr, loss_empi, loss_theo = self.criterion(all_z, all_y, self.num_classes)
 			loss = mi + mcr
 

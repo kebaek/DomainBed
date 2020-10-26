@@ -163,7 +163,7 @@ if __name__ == "__main__":
 		num_classes = 10.0
 	if args.dataset == 'PACS':
 		num_classes = 7.0
-	hparams['n_comp'] = int(hparams['fd']/num_classes)
+	hparams['n_comp'] = 3 #int(hparams['fd']/num_classes)
 	# Split each env into an 'in-split' and an 'out-split'. We'll train on
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
@@ -200,9 +200,9 @@ if __name__ == "__main__":
 	algorithm.load_state_dict(torch.load(args.output_dir + '/G.pth.tar'))
 	algorithm = algorithm.to(device)
 	algorithm.eval()
-	all_data = chain(*eval_loaders[:len(in_splits)])
+	all_data = chain(*[eval_loaders[i] for i in range(len(in_splits)) if i not in args.test_envs])
 	algorithm.update(all_data, components=True)
-
+	'''
 	print('SVD Accuracy')
 	evals = zip(eval_loader_names, eval_loaders, eval_weights)
 	results = {}
@@ -213,9 +213,9 @@ if __name__ == "__main__":
 	misc.print_row(results_keys, colwidth=12)
 	misc.print_row([results[key] for key in results_keys], colwidth=12)
 
-	np.save(args.output_dir+'/components.npy', algorithm.components)
-	np.save(args.output_dir+'/singular.npy', algorithm.singular_values)
-	'''
+	#np.save(args.output_dir+'/components.npy', algorithm.components)
+	#np.save(args.output_dir+'/singular.npy', algorithm.singular_values)
+	
 	print('SVD Singular Values')
 	if len(algorithm.singular_values) != 2:
 		sg = [algorithm.singular_values]
@@ -225,6 +225,7 @@ if __name__ == "__main__":
 		for i in range(dataset.num_classes):
 			print('Class %d' %(i))
 			print('Values: {0}'.format(singular_values[i].numpy()))
+			print('Components: {0}'.format(algorithm.components[i].numpy()))
 	print('SVD by Domain')
 	count = 0
 	for featurizer in algorithm.networks:
@@ -246,19 +247,22 @@ if __name__ == "__main__":
 		count += 1
 	'''
 	print('Mutual Information')
+	avg = 0
+	count = 0.0
 	for featurizer in algorithm.networks:
 		for i in range(len(dataset)):
 			for j in range(i+1,len(dataset)):
 				d = mutual_information(featurizer,eval_loaders[i], eval_loaders[j])
+				avg += d
+				count += 1.0
 				print('(%d, %d): %f'%(i,j,d))
-
-'''
+	print(avg/count)
 	print('Mutual Information per Class')
 	for featurizer in algorithm.networks:
 		for i in range(len(dataset)):
-			for j in range(i,len(dataset)):
+			for j in range(i+1,len(dataset)):
+				print(algorithm.num_classes)
 				d = mutual_information_per_class(featurizer, algorithm.num_classes,eval_loaders[i], eval_loaders[j])
 				labels = ['(D%d, D%d, C%d)' % (i,j,c) for c in range(len(d))]
-			misc.print_row(labels, colwidth=12)
-			misc.print_row(d, colwidth=12)
-'''
+				misc.print_row(labels, colwidth=12)
+				misc.print_row(d, colwidth=12)

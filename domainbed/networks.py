@@ -44,11 +44,14 @@ class ResNet50(torch.nn.Module):
         self.hparams = hparams
         self.dropout = nn.Dropout(hparams['resnet_dropout'])
         self.reshape = torch.nn.Sequential(
-            nn.Linear(self.n_outputs, self.n_outputs, bias=False),
+	    nn.Linear(self.n_outputs,self.n_outputs, bias=False),
             nn.BatchNorm1d(self.n_outputs),
             nn.ReLU(inplace=True),
-            nn.Linear(self.n_outputs, hparams['fd'], bias=True)
-        )
+            nn.Linear(self.n_outputs, self.n_outputs, bias=True),
+            nn.BatchNorm1d(self.n_outputs),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.n_outputs, hparams['fd'], bias=True),
+	)
 
     def forward(self, x):
         """Encode x into a feature vector of size n_outputs."""
@@ -63,9 +66,14 @@ class ResNet50(torch.nn.Module):
         x = self.network.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.dropout(x)
-        x = self.reshape(x)
-        return F.normalize(x)
-       # return x
+        if self.hparams['fd'] != self.n_outputs:
+            x = self.reshape(x)
+            if self.hparams['norm'] == 1:
+                return F.normalize(x)
+            else:
+                return x
+        else:
+            return x
 
     def train(self, mode=True):
         """
@@ -94,7 +102,7 @@ class MNIST_CNN(nn.Module):
         self.conv2 = nn.Conv2d(64, 128, 3, stride=2, padding=1)
         self.conv3 = nn.Conv2d(128, 128, 3, 1, padding=1)
         self.conv4 = nn.Conv2d(128, 128, 3, 1, padding=1)
-
+        self.hparams = hparams
         self.bn0 = nn.GroupNorm(8, 64)
         self.bn1 = nn.GroupNorm(8, 128)
         self.bn2 = nn.GroupNorm(8, 128)
@@ -124,8 +132,10 @@ class MNIST_CNN(nn.Module):
         x = self.bn3(x)
         x = x.mean(dim=(2,3))
         x = self.reshape(x)
-        return F.normalize(x)
-       # return x
+        if self.hparams['norm'] == 1:
+            return F.normalize(x)
+        else:
+            return x
 
 def Featurizer(input_shape, hparams):
     """Auto-select an appropriate featurizer for the given input shape."""

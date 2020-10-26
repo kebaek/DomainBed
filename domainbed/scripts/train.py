@@ -45,6 +45,7 @@ if __name__ == "__main__":
 	## MCR ##
 	parser.add_argument('--fd', type=int, default=0)
 	parser.add_argument('--beta', type=float, default=100)
+	parser.add_argument('--norm', type=int, default=0)
 	args = parser.parse_args()
 
 	# If we ever want to implement checkpointing, just persist these values
@@ -71,6 +72,8 @@ if __name__ == "__main__":
 		hparams['fd']=args.fd
 	if args.beta != 100:
 		hparams['beta'] = args.beta
+	hparams['norm'] = args.norm
+        
 	if args.dataset == 'RotatedMNIST':
 		num_classes = 10.0
 	if args.dataset == 'PACS':
