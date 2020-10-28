@@ -100,7 +100,7 @@ def split_dataset_by_class(dataset, n, seed=0):
     i = 0
     for _, y in dataset:
         y = int(y)
-        classes.setdefault(y, default=[])
+        classes.setdefault(y,[])
         classes[y].append(i)
         i += 1
 
@@ -109,9 +109,11 @@ def split_dataset_by_class(dataset, n, seed=0):
 
     keys_1, keys_2 = [], []
     for key in classes:
-        keys_1.append(classes[key][:n])
-        keys_2.append(classes[key][n:])
+        keys_1.extend(classes[key][:n])
+        keys_2.extend(classes[key][n:])
 
+    np.random.RandomState(seed).shuffle(keys_1)
+    np.random.RandomState(seed).shuffle(keys_2)
     print(len(keys_1))
     return _SplitDataset(dataset, keys_1), _SplitDataset(dataset, keys_2)
 

@@ -38,7 +38,7 @@ if __name__ == "__main__":
 		help='Number of steps. Default is dataset-dependent.')
 	parser.add_argument('--checkpoint_freq', type=int, default=None,
 		help='Checkpoint every N steps. Default is dataset-dependent.')
-	parser.add_argument('--test_envs', type=int, nargs='+', default=[0])
+	parser.add_argument('--test_envs', type=int, nargs='+', default=[])
 	parser.add_argument('--output_dir', type=str, default="train_output")
 	parser.add_argument('--holdout_fraction', type=float, default=0.2)
 
@@ -104,11 +104,11 @@ if __name__ == "__main__":
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
 	out_splits = []
-	holdout = [500,500,500]
+	holdout = [400,0,0,0]
 	for env_i, env in enumerate(dataset):
 		#out, in_ = misc.split_dataset(env,
 		in_, out = misc.split_dataset_by_class(env,
-			holdout[i],
+			holdout[env_i],
 			#int(len(env)*args.holdout_fraction),
 			misc.seed_hash(args.trial_seed, env_i))
 		if hparams['class_balanced']:
@@ -134,10 +134,10 @@ if __name__ == "__main__":
 		batch_size=64,
 		num_workers=dataset.N_WORKERS,
 		length=FastDataLoader.EPOCH)
-		for env, _ in (in_splits + out_splits)]
-	eval_weights = [None for _, weights in (in_splits + out_splits)]
+		for env, _ in (in_splits + out_splits) if len(env) != 0]
+	eval_weights = [None for _, weights in (in_splits + out_splits) if len(_) != 0]
 	eval_loader_names = ['env{}_in'.format(i)
-		for i in range(len(in_splits))]
+		for i in range(len(in_splits)) if i not in args.test_envs]
 	eval_loader_names += ['env{}_out'.format(i)
 		for i in range(len(out_splits))]
 

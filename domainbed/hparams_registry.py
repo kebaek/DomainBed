@@ -31,7 +31,7 @@ def _hparams(algorithm, dataset, random_state):
 		hparams['weight_decay'] = (0., 10**random_state.uniform(-6, -2))
 
 	hparams['class_balanced'] = (True, False)
-	hparams['norm'] = (True,False)
+	hparams['norm'] = (1,0)
 	if algorithm in ['DANN', 'CDANN']:
 
 		if dataset in RESNET_DATASETS:
