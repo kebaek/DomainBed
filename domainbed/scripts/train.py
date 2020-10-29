@@ -77,7 +77,7 @@ if __name__ == "__main__":
 	if args.dataset == 'RotatedMNIST':
 		num_classes = 10.0
 	if args.dataset == 'PACS':
-		num_classes = 7.0
+		num_classes = 6.0
 	hparams['n_comp'] = int(hparams['fd']/num_classes)
 	print('HParams:')
 	for k, v in sorted(hparams.items()):
@@ -104,7 +104,7 @@ if __name__ == "__main__":
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
 	out_splits = []
-	holdout = [400,0,0,0]
+	holdout = [50,50,50,50]
 	for env_i, env in enumerate(dataset):
 		#out, in_ = misc.split_dataset(env,
 		in_, out = misc.split_dataset_by_class(env,

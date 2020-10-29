@@ -238,7 +238,6 @@ class MultipleEnvironmentImageFolder(MultipleDomainDataset):
             path = os.path.join(root, environment)
             env_dataset = ImageFolder(path,
                 transform=env_transform)
-            print(env_dataset.class_to_idx)
 
             self.datasets.append(env_dataset)
 
