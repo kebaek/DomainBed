@@ -122,7 +122,7 @@ if __name__ == "__main__":
 	train_loaders = [FastDataLoader(
 		dataset=env,
 		weights=env_weights,
-		batch_size=hparams['batch_size'],
+		batch_size=hparams['batch_size']//(4-len(args.test_envs)),
 		num_workers=dataset.N_WORKERS,
 		length=FastDataLoader.INFINITE)
 		for i, (env, env_weights) in enumerate(in_splits)
