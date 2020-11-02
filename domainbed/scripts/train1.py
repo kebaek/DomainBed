@@ -123,7 +123,7 @@ if __name__ == "__main__":
 	train_loaders = [FastDataLoader(
 		dataset=env,
 		weights=env_weights,
-		batch_size=hparams['batch_size']//(4-len(args.test_envs)),
+		batch_size=int(hparams['batch_size']*abs(i-args.holdout)),
 		num_workers=dataset.N_WORKERS,
 		length=FastDataLoader.INFINITE)
 		for i, (env, env_weights) in enumerate(in_splits)
@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
 	last_results_keys = None
 	m = 0
-	for step in range(start_step, n_steps):
+	for step in range(start_step, n_steps+1):
 		step_start_time = time.time()
 
 		minibatches_device = [(x.to(device), y.to(device))
@@ -193,6 +193,8 @@ if __name__ == "__main__":
 				print('saved at step %d'%(step))
 				torch.save(algorithm.state_dict(),
 						   os.path.join(args.output_dir, "G.pth.tar"))
+			if step == n_steps:
+				torch.save(algorithm.state_dict(), os.path.join(args.output_dir, "L.pth.tar"))
 
 			results_keys = sorted(results.keys())
 			if results_keys != last_results_keys:

@@ -39,6 +39,7 @@ if __name__ == "__main__":
 	parser.add_argument('--checkpoint_freq', type=int, default=None,
 		help='Checkpoint every N steps. Default is dataset-dependent.')
 	parser.add_argument('--test_envs', type=int, nargs='+', default=[])
+	parser.add_argument('--holdout', type=int, nargs='+', default=[0,0,0,0])
 	parser.add_argument('--output_dir', type=str, default="train_output")
 	parser.add_argument('--holdout_fraction', type=float, default=0.2)
 
@@ -104,7 +105,7 @@ if __name__ == "__main__":
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
 	out_splits = []
-	holdout = [50,50,50,50]
+	holdout = args.holdout
 	for env_i, env in enumerate(dataset):
 		#out, in_ = misc.split_dataset(env,
 		in_, out = misc.split_dataset_by_class(env,
@@ -158,7 +159,7 @@ if __name__ == "__main__":
 
 	last_results_keys = None
 	m = 0
-	for step in range(start_step, n_steps):
+	for step in range(start_step, n_steps+1):
 		step_start_time = time.time()
 
 		minibatches_device = [(x.to(device), y.to(device))
@@ -192,6 +193,8 @@ if __name__ == "__main__":
 				print('saved at step %d'%(step))
 				torch.save(algorithm.state_dict(),
 						   os.path.join(args.output_dir, "G.pth.tar"))
+			if step == n_steps:
+				torch.save(algorithm.state_dict(), os.path.join(args.output_dir, "L.pth.tar"))
 
 			results_keys = sorted(results.keys())
 			if results_keys != last_results_keys:
