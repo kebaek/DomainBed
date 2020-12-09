@@ -105,7 +105,7 @@ if __name__ == "__main__":
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
 	out_splits = []
-	holdout = [int(args.holdout*250), int((1-args.holdout)*250), 0, 0]
+	holdout = [int(args.holdout*hparams['batch_size']), int((1-args.holdout)*hparams['batch_size']), 0, 0]
 	for env_i, env in enumerate(dataset):
 		#out, in_ = misc.split_dataset(env,
 		in_, out = misc.split_dataset_by_class(env,
@@ -166,7 +166,7 @@ if __name__ == "__main__":
 			for x,y in next(train_minibatches_iterator)]
 		step_vals = algorithm.update(minibatches_device)
 
-		if step % args.checkpoint_freq == 0:
+		if step % args.checkpoint_freq == 0 and False:
 			all_data = chain(*eval_loaders[:len(in_splits)])
 			algorithm.update(all_data, components=True)
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)

@@ -24,7 +24,7 @@ def _hparams(algorithm, dataset, random_state):
 		hparams['lr'] = (1e-3, 10**random_state.uniform(-4.5, -2.5))
 		#hparams['batch_size'] = (128, int(2**random_state.uniform(3, 9)))
 		#hparams['batch_size'] = (512, fd * int(random_state.uniform(3, 9)))
-		hparams['batch_size']=(256,256)
+		hparams['batch_size']=(252,252)
 	if dataset in ['ColoredMNIST', 'RotatedMNIST']:
 		hparams['weight_decay'] = (0., 0.)
 	else:
