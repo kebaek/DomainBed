@@ -105,11 +105,11 @@ if __name__ == "__main__":
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
 	out_splits = []
-	holdout = args.holdout
+	#holdout = args.holdout
 	for env_i, env in enumerate(dataset):
-		#out, in_ = misc.split_dataset(env,
-		in_, out = misc.split_dataset_by_class(env,
-			holdout[env_i],
+		out, in_ = misc.split_dataset(env,
+		#in_, out = misc.split_dataset_by_class(env,
+		#	holdout[env_i],
 			#int(len(env)*args.holdout_fraction),
 			misc.seed_hash(args.trial_seed, env_i))
 		if hparams['class_balanced']:
