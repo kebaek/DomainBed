@@ -144,7 +144,7 @@ class MCR(Algorithm):
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
-        
+
 	def update(self, minibatches, components=False):
 		if components:
 			p = []
@@ -296,7 +296,11 @@ class AbstractDANN(Algorithm):
 		# Algorithms
 		self.featurizer = networks.Featurizer(input_shape, self.hparams)
 		self.classifier = nn.Linear(self.featurizer.n_outputs, num_classes)
-		self.discriminator = networks.MLP(self.featurizer.n_outputs,
+		if self.conditional:
+			self.discriminator = networks.MLP(self.featurizer.n_outputs,
+			num_domains, self.hparams)
+		else:
+			self.discriminator = networks.MLP(self.featurizer.n_outputs,
 			num_domains, self.hparams)
 		self.class_embeddings = nn.Embedding(num_classes,
 			self.featurizer.n_outputs)
@@ -315,6 +319,9 @@ class AbstractDANN(Algorithm):
 			lr=self.hparams["lr_g"],
 			weight_decay=self.hparams['weight_decay_g'],
 			betas=(self.hparams['beta1'], 0.9))
+
+		self.disc_scheduler = torch.optim.lr_scheduler.StepLR(self.disc_opt, hparams['decay'], gamma=hparams['beta'], last_epoch=-1)
+		self.gen_scheduler = torch.optim.lr_scheduler.StepLR(self.gen_opt, hparams['decay'], gamma=hparams['beta'], last_epoch=-1)
 
 	def update(self, minibatches):
 		self.update_count += 1
@@ -351,6 +358,7 @@ class AbstractDANN(Algorithm):
 			self.disc_opt.zero_grad()
 			disc_loss.backward()
 			self.disc_opt.step()
+			self.disc_scheduler.step()
 			return {'disc_loss': disc_loss.item()}
 		else:
 			all_preds = self.classifier(all_z)
@@ -361,6 +369,7 @@ class AbstractDANN(Algorithm):
 			self.gen_opt.zero_grad()
 			gen_loss.backward()
 			self.gen_opt.step()
+			self.gen_scheduler.step()
 			return {'gen_loss': gen_loss.item()}
 
 	def predict(self, x):
