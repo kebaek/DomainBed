@@ -17,6 +17,7 @@ from sklearn.svm import LinearSVC
 ALGORITHMS = [
 	'ERM',
 	'DANN',
+	'CHDANN',
 	'CDANN',
 	'IRM',
 	'Mixup',
@@ -284,21 +285,27 @@ class AbstractDANN(Algorithm):
 	"""Domain-Adversarial Neural Networks (abstract class)"""
 
 	def __init__(self, input_shape, num_classes, num_domains,
-				 hparams, conditional, class_balance):
+				 hparams, conditional, class_balance, hot=False):
 
 		super(AbstractDANN, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 
 		self.register_buffer('update_count', torch.tensor([0]))
+		self.num_classes = num_classes
 		self.conditional = conditional
+		self.hot = hot
 		self.class_balance = class_balance
 
 		# Algorithms
 		self.featurizer = networks.Featurizer(input_shape, self.hparams)
 		self.classifier = nn.Linear(hparams['fd'], num_classes)
 		if self.conditional:
-			self.discriminator = networks.MLP(hparams['fd'],
-			num_domains, self.hparams)
+			if self.hot:
+				self.discriminator = networks.MLP(hparams['fd']+num_classes,
+					num_domains, self.hparams)
+			else:
+				self.discriminator = networks.MLP(hparams['fd'],
+					num_domains, self.hparams)
 		else:
 			self.discriminator = networks.MLP(hparams['fd'],
 			num_domains, self.hparams)
@@ -329,7 +336,10 @@ class AbstractDANN(Algorithm):
 		all_y = torch.cat([y for x, y in minibatches])
 		all_z = self.featurizer(all_x)
 		if self.conditional:
-			disc_input = all_z + self.class_embeddings(all_y)
+			if self.hot:
+				disc_input = torch.cat((all_z,F.one_hot(all_y, self.num_classes)),1)
+			else:
+				disc_input = all_z + self.class_embeddings(all_y)
 		else:
 			disc_input = all_z
 		disc_out = self.discriminator(disc_input)
@@ -388,6 +398,11 @@ class CDANN(AbstractDANN):
 		super(CDANN, self).__init__(input_shape, num_classes, num_domains,
 			hparams, conditional=True, class_balance=True)
 
+class CHDANN(AbstractDANN):
+	"""Conditional DANN"""
+	def __init__(self, input_shape, num_classes, num_domains, hparams):
+		super(CDANN, self).__init__(input_shape, num_classes, num_domains,
+			hparams, conditional=True, class_balance=True, hot=True)
 
 class IRM(ERM):
 	"""Invariant Risk Minimization"""
