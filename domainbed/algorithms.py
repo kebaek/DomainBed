@@ -295,15 +295,15 @@ class AbstractDANN(Algorithm):
 
 		# Algorithms
 		self.featurizer = networks.Featurizer(input_shape, self.hparams)
-		self.classifier = nn.Linear(self.featurizer.n_outputs, num_classes)
+		self.classifier = nn.Linear(hparams['fd'], num_classes)
 		if self.conditional:
-			self.discriminator = networks.MLP(self.featurizer.n_outputs,
+			self.discriminator = networks.MLP(hparams['fd'],
 			num_domains, self.hparams)
 		else:
-			self.discriminator = networks.MLP(self.featurizer.n_outputs,
+			self.discriminator = networks.MLP(hparams['fd'],
 			num_domains, self.hparams)
 		self.class_embeddings = nn.Embedding(num_classes,
-			self.featurizer.n_outputs)
+			hparams['fd'])
 
 		# Optimizers
 		self.disc_opt = torch.optim.Adam(

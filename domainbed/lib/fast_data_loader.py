@@ -27,7 +27,7 @@ class FastDataLoader(object):
                 "illegal: every datapoint would eventually get sampled exactly "
                 "once.")
 
-        if weights == None:
+        if weights is None:
             weights = torch.ones(len(dataset))
         if length == self.INFINITE:
             batch_sampler = torch.utils.data.BatchSampler(

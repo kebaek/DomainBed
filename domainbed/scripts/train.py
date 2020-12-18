@@ -110,7 +110,7 @@ if __name__ == "__main__":
 		out, in_ = misc.split_dataset(env,
 		#in_, out = misc.split_dataset_by_class(env,
 		#	holdout[env_i],
-			#int(len(env)*args.holdout_fraction),
+			int(len(env)*args.holdout_fraction),
 			misc.seed_hash(args.trial_seed, env_i))
 		if hparams['class_balanced']:
 			in_weights = misc.make_weights_for_balanced_classes(in_)
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 	train_loaders = [FastDataLoader(
 		dataset=env,
 		weights=env_weights,
-		batch_size=hparams['batch_size']//(4-len(args.test_envs)),
+		batch_size=hparams['batch_size'],
 		num_workers=dataset.N_WORKERS,
 		length=FastDataLoader.INFINITE)
 		for i, (env, env_weights) in enumerate(in_splits)
@@ -135,10 +135,10 @@ if __name__ == "__main__":
 		batch_size=64,
 		num_workers=dataset.N_WORKERS,
 		length=FastDataLoader.EPOCH)
-		for env, _ in (in_splits + out_splits) if len(env) != 0]
-	eval_weights = [None for _, weights in (in_splits + out_splits) if len(_) != 0]
+		for env, _ in (in_splits + out_splits)]
+	eval_weights = [None for _, weights in (in_splits + out_splits)]
 	eval_loader_names = ['env{}_in'.format(i)
-		for i in range(len(in_splits)) if i not in args.test_envs]
+		for i in range(len(in_splits))]
 	eval_loader_names += ['env{}_out'.format(i)
 		for i in range(len(out_splits))]
 
@@ -166,9 +166,9 @@ if __name__ == "__main__":
 			for x,y in next(train_minibatches_iterator)]
 		step_vals = algorithm.update(minibatches_device)
 
-		if step % args.checkpoint_freq == 0:
-			all_data = chain(*eval_loaders[:len(in_splits)])
-			algorithm.update(all_data, components=True)
+		#if step % args.checkpoint_freq == 0:
+			#all_data = chain(*eval_loaders[:len(in_splits)])
+			#algorithm.update(all_data)# components=True)
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)
 
 		for key, val in step_vals.items():
