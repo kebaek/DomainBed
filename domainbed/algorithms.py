@@ -13,6 +13,7 @@ from domainbed.lib.misc import random_pairs_of_minibatches
 from domainbed.mcr import MaximalCodingRateReduction, MutualInformation
 from sklearn.decomposition import TruncatedSVD
 from sklearn.svm import LinearSVC
+from itertools import combinations
 
 ALGORITHMS = [
 	'ERM',
@@ -287,7 +288,7 @@ class AbstractDANN(Algorithm):
 	"""Domain-Adversarial Neural Networks (abstract class)"""
 
 	def __init__(self, input_shape, num_classes, num_domains,
-				 hparams, conditional, class_balance, hot=False):
+				 hparams, conditional, class_balance, hot=False, wasserstein=False):
 
 		super(AbstractDANN, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
@@ -350,13 +351,20 @@ class AbstractDANN(Algorithm):
 			for i, (x, y) in enumerate(minibatches)
 		])
 
-		if self.class_balance:
-			y_counts = F.one_hot(all_y).sum(dim=0)
-			weights = 1. / (y_counts[all_y] * y_counts.shape[0]).float()
-			disc_loss = F.cross_entropy(disc_out, disc_labels, reduction='none')
-			disc_loss = (weights * disc_loss).sum()
+		if wasserstein:
+			E = [torch.mean(disc_out[disc_labels==i],dim=0) for i in range(len(minibatches))]
+			disc_loss = 0
+			pair_list = list(combinations(range(len(E)), 2))
+			for i,j in pair_list:
+				disc_loss -= torch.sum(torch.abs(E[i]-E[j]))
 		else:
-			disc_loss = F.cross_entropy(disc_out, disc_labels)
+			if self.class_balance:
+				y_counts = F.one_hot(all_y).sum(dim=0)
+				weights = 1. / (y_counts[all_y] * y_counts.shape[0]).float()
+				disc_loss = F.cross_entropy(disc_out, disc_labels, reduction='none')
+				disc_loss = (weights * disc_loss).sum()
+			else:
+				disc_loss = F.cross_entropy(disc_out, disc_labels)
 
 		disc_softmax = F.softmax(disc_out, dim=1)
 		input_grad = autograd.grad(disc_softmax[:, disc_labels].sum(),
@@ -395,16 +403,21 @@ class DANN(AbstractDANN):
 
 
 class CDANN(AbstractDANN):
-	"""Conditional DANN"""
+	"""Conditional Embedding DANN"""
 	def __init__(self, input_shape, num_classes, num_domains, hparams):
 		super(CDANN, self).__init__(input_shape, num_classes, num_domains,
 			hparams, conditional=True, class_balance=True)
 
 class CHDANN(AbstractDANN):
-	"""Conditional DANN"""
+	"""Conditional One hot DANN"""
 	def __init__(self, input_shape, num_classes, num_domains, hparams):
 		super(CHDANN, self).__init__(input_shape, num_classes, num_domains,
 			hparams, conditional=True, class_balance=True, hot=True)
+
+class WDANN(AbstractDANN):
+	def __init__(self, input_shape, num_classes, num_domains, hparams):
+		super(WDANN, self).__init__(input_shape, num_classes, num_domains,
+			hparams, conditional=True, class_balance=True, hot=True, wasserstein=True)
 
 class IRM(ERM):
 	"""Invariant Risk Minimization"""
