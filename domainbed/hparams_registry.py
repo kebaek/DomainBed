@@ -32,7 +32,7 @@ def _hparams(algorithm, dataset, random_state):
 
 	hparams['class_balanced'] = (True, False)
 	hparams['norm'] = (1,0)
-	if algorithm in ['DANN', 'CDANN']:
+	if algorithm in ['DANN', 'CDANN','CHDANN']:
 
 		if dataset in RESNET_DATASETS:
 			hparams['lr_g'] = (5e-5, 10**random_state.uniform(-5, -3.5))

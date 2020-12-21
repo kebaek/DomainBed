@@ -83,6 +83,7 @@ class ERM(Algorithm):
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
+		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=hparams['beta'], last_epoch=-1)
 		self.cmi = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
 		self.singular_values = {}
@@ -108,6 +109,7 @@ class ERM(Algorithm):
 			self.optimizer.zero_grad()
 			loss.backward()
 			self.optimizer.step()
+			self.scheduler.step()
 
 			return {'loss': loss.item(), 'ce': ce.item(), 'mi': mi.item()}
 
@@ -295,17 +297,17 @@ class AbstractDANN(Algorithm):
 		self.conditional = conditional
 		self.hot = hot
 		self.class_balance = class_balance
-
+		print(num_domains)
 		# Algorithms
-		self.featurizer = networks.Featurizer(input_shape, self.hparams)
+		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
 		self.classifier = nn.Linear(hparams['fd'], num_classes)
 		if self.conditional:
 			if self.hot:
-				self.discriminator = networks.MLP(hparams['fd']+num_classes,
-					num_domains, self.hparams)
+				self.discriminator = torch.nn.DataParallel(networks.MLP(hparams['fd']+num_classes,
+					num_domains, self.hparams))
 			else:
-				self.discriminator = networks.MLP(hparams['fd'],
-					num_domains, self.hparams)
+				self.discriminator = torch.nn.DataParallel(networks.MLP(hparams['fd'],
+					num_domains, self.hparams))
 		else:
 			self.discriminator = networks.MLP(hparams['fd'],
 			num_domains, self.hparams)
@@ -337,7 +339,7 @@ class AbstractDANN(Algorithm):
 		all_z = self.featurizer(all_x)
 		if self.conditional:
 			if self.hot:
-				disc_input = torch.cat((all_z,F.one_hot(all_y, self.num_classes)),1)
+				disc_input = torch.cat((all_z,F.one_hot(all_y, self.num_classes).float()),1)
 			else:
 				disc_input = all_z + self.class_embeddings(all_y)
 		else:
@@ -401,7 +403,7 @@ class CDANN(AbstractDANN):
 class CHDANN(AbstractDANN):
 	"""Conditional DANN"""
 	def __init__(self, input_shape, num_classes, num_domains, hparams):
-		super(CDANN, self).__init__(input_shape, num_classes, num_domains,
+		super(CHDANN, self).__init__(input_shape, num_classes, num_domains,
 			hparams, conditional=True, class_balance=True, hot=True)
 
 class IRM(ERM):
