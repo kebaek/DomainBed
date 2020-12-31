@@ -73,8 +73,7 @@ if __name__ == "__main__":
 
 	if args.fd !=0:
 		hparams['fd']=args.fd
-	if args.algorithm == 'CHDANN':
-		hparams['lambda'] = args.lam
+	hparams['lambda'] = args.lam
 	if args.beta != 100:
 		hparams['beta'] = args.beta
 	hparams['norm'] = args.norm
@@ -83,7 +82,6 @@ if __name__ == "__main__":
 		num_classes = 10.0
 	if args.dataset == 'PACS':
 		num_classes = 6.0
-	hparams['n_comp'] = int(hparams['fd']/num_classes)
 	print('HParams:')
 	for k, v in sorted(hparams.items()):
 		print('\t{}: {}'.format(k, v))

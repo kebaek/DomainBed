@@ -20,6 +20,7 @@ ALGORITHMS = [
 	'DANN',
 	'CHDANN',
 	'CDANN',
+	'WDANN',
 	'IRM',
 	'Mixup',
 	'GroupDRO',
@@ -297,6 +298,7 @@ class AbstractDANN(Algorithm):
 		self.num_classes = num_classes
 		self.conditional = conditional
 		self.hot = hot
+		self.wasserstein = wasserstein
 		self.class_balance = class_balance
 		print(num_domains)
 		# Algorithms
@@ -351,7 +353,7 @@ class AbstractDANN(Algorithm):
 			for i, (x, y) in enumerate(minibatches)
 		])
 
-		if wasserstein:
+		if self.wasserstein:
 			E = [torch.mean(disc_out[disc_labels==i],dim=0) for i in range(len(minibatches))]
 			disc_loss = 0
 			pair_list = list(combinations(range(len(E)), 2))
