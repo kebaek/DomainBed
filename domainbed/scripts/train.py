@@ -168,9 +168,9 @@ if __name__ == "__main__":
 			for x,y in next(train_minibatches_iterator)]
 		step_vals = algorithm.update(minibatches_device)
 
-		#if step % args.checkpoint_freq == 0:
-			#all_data = chain(*eval_loaders[:len(in_splits)])
-			#algorithm.update(all_data)# components=True)
+		if args.algorithm=='MCR' and step % args.checkpoint_freq == 0:
+			all_data = chain(*eval_loaders[:len(in_splits)])
+			algorithm.update(all_data,components=True)
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)
 
 		for key, val in step_vals.items():
@@ -186,7 +186,7 @@ if __name__ == "__main__":
 				results[key] = np.mean(val)
 			evals = zip(eval_loader_names, eval_loaders, eval_weights)
 			for name, loader, weights in evals:
-				acc = misc.accuracy(algorithm, loader, weights, device)e
+				acc = misc.accuracy(algorithm, loader, weights, device)
 				results[name+'_acc'] = acc
 			current_val = np.average([results['env{}_out_acc'.format(i)] for i in range(len(in_splits)) if i not in args.test_envs])
 			if m <= current_val:
@@ -194,9 +194,6 @@ if __name__ == "__main__":
 				print('saved at step %d'%(step))
 				torch.save(algorithm.state_dict(),
 						   os.path.join(args.output_dir, "G.pth.tar"))
-				for name, param in algorithm.classifier.named_parameters():
-					print(name)
-					print(param)
 			if step == n_steps:
 				torch.save(algorithm.state_dict(), os.path.join(args.output_dir, "L.pth.tar"))
 
@@ -219,6 +216,8 @@ if __name__ == "__main__":
 			algorithm_dict = algorithm.state_dict()
 			start_step = step + 1
 			checkpoint_vals = collections.defaultdict(lambda: [])
-
+	for name, param in algorithm.classifier.named_parameters():
+		print(name)
+		print(param)  
 	with open(os.path.join(args.output_dir, 'done'), 'w') as f:
 		f.write('done')

@@ -107,7 +107,7 @@ class ERM(Algorithm):
 			all_x = torch.cat([x for x,y in minibatches])
 			all_y = torch.cat([y for x,y in minibatches])
 			all_z = self.featurizer(all_x).cuda()
-			all_z = torch.cat((all_z,F.one_hot(all_y, self.num_classes).float()),1)
+			all_z = torch.cat((all_z,10000*F.one_hot(all_y, self.num_classes).float()),1)
 			ce = F.cross_entropy(self.classifier(all_z), all_y)
 			loss = ce
 			mi = torch.tensor(0)
@@ -132,7 +132,7 @@ class ERM(Algorithm):
 
 	def predict(self, x, y):
 		z = self.featurizer(x)
-		z = torch.cat((z,F.one_hot(y, self.num_classes).float()),1)
+		z = torch.cat((z,10000*F.one_hot(y, self.num_classes).float()),1)
 		return self.classifier(z)
 
 class MCR(Algorithm):
@@ -144,10 +144,7 @@ class MCR(Algorithm):
 		super(MCR, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-		self.classifier = nn.Sequential(
-			nn.Linear(hparams['fd'] + num_classes, hparams['fd']),
-			nn.Linear(hparams['fd'], num_classes)
-		)
+		self.classifier = nn.Linear(hparams['fd'] + num_classes, hparams['fd'])
 		self.network = nn.Sequential(self.featurizer, self.classifier)
 		self.networks = [self.featurizer]
 		self.optimizer = torch.optim.Adam(
