@@ -76,7 +76,10 @@ class ERM(Algorithm):
 		super(ERM, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-		self.classifier = nn.Linear(hparams['fd'], num_classes)
+		self.classifier = nn.Sequential(
+			nn.Linear(hparams['fd'] + num_classes, hparams['fd']),
+			nn.Linear(hparams['fd'], num_classes)
+		)
 		self.network = nn.Sequential(self.featurizer, self.classifier)
 		self.networks = [self.featurizer]
 		self.optimizer = torch.optim.Adam(
@@ -103,6 +106,7 @@ class ERM(Algorithm):
 			all_x = torch.cat([x for x,y in minibatches])
 			all_y = torch.cat([y for x,y in minibatches])
 			all_z = self.featurizer(all_x).cuda()
+			all_z = torch.cat((all_z,F.one_hot(all_y, self.num_classes).float()),1)
 			ce = F.cross_entropy(self.classifier(all_z), all_y)
 			loss = ce
 			mi = torch.tensor(0)
@@ -137,13 +141,24 @@ class MCR(Algorithm):
 		super(MCR, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-		self.network = self.featurizer
+		self.classifier = nn.Sequential(
+			nn.Linear(hparams['fd'] + num_classes, hparams['fd']),
+			nn.Linear(hparams['fd'], num_classes)
+		)
+		self.network = nn.Sequential(self.featurizer, self.classifier)
 		self.networks = [self.featurizer]
 		self.optimizer = torch.optim.Adam(
-			self.featurizer.parameters(),
+			self.network.parameters(),
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
+		#self.network = self.featurizer
+		#self.networks = [self.featurizer]
+		#self.optimizer = torch.optim.Adam(
+		#	self.featurizer.parameters(),
+		#	lr=self.hparams["lr"],
+		#	weight_decay=self.hparams['weight_decay']
+		#)
 		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=hparams['beta'], last_epoch=-1)
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
@@ -161,6 +176,8 @@ class MCR(Algorithm):
 			return None
 		else:
 			all_z = self.featurizer(torch.cat([x for x,y in minibatches]))
+			all_y = torch.cat([y for x,y in minibatches])
+			all_z = F.normalize(self.classifier(torch.cat((all_z, F.one_hot(all_y, self.num_classes).float()),1)))
 			if self.hparams['norm']==2:
 				all_z = len(all_z)*all_z/torch.norm(all_z,p='fro')
 			all_y = torch.cat([y for x,y in minibatches])

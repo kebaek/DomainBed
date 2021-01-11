@@ -39,7 +39,7 @@ if __name__ == "__main__":
 	parser.add_argument('--checkpoint_freq', type=int, default=None,
 		help='Checkpoint every N steps. Default is dataset-dependent.')
 	parser.add_argument('--test_envs', type=int, nargs='+', default=[])
-	parser.add_argument('--holdout', type=float, default=0.0)
+	parser.add_argument('--holdout', type=int, nargs='+', default=[0,0,0,0])
 	parser.add_argument('--output_dir', type=str, default="train_output")
 	parser.add_argument('--holdout_fraction', type=float, default=0.2)
 
@@ -47,6 +47,8 @@ if __name__ == "__main__":
 	parser.add_argument('--fd', type=int, default=0)
 	parser.add_argument('--beta', type=float, default=100)
 	parser.add_argument('--norm', type=int, default=0)
+	parser.add_argument('--lrd', type=float, default=5e-5)
+	parser.add_argument('--lam', type=float, default=1.0)
 	args = parser.parse_args()
 
 	# If we ever want to implement checkpointing, just persist these values
@@ -71,6 +73,8 @@ if __name__ == "__main__":
 
 	if args.fd !=0:
 		hparams['fd']=args.fd
+	if args.algorithm == 'CHDANN':
+		hparams['lambda'] = args.lam
 	if args.beta != 100:
 		hparams['beta'] = args.beta
 	hparams['norm'] = args.norm
@@ -105,12 +109,12 @@ if __name__ == "__main__":
 	# each in-split except the test envs, and evaluate on all splits.
 	in_splits = []
 	out_splits = []
-	holdout = [int(args.holdout*hparams['batch_size']), int((1-args.holdout)*hparams['batch_size']), 0, 0]
+	#holdout = args.holdout
 	for env_i, env in enumerate(dataset):
-		#out, in_ = misc.split_dataset(env,
-		in_, out = misc.split_dataset_by_class(env,
-			holdout[env_i],
-			#int(len(env)*args.holdout_fraction),
+		out, in_ = misc.split_dataset(env,
+		#in_, out = misc.split_dataset_by_class(env,
+		#	holdout[env_i],
+			int(len(env)*args.holdout_fraction),
 			misc.seed_hash(args.trial_seed, env_i))
 		if hparams['class_balanced']:
 			in_weights = misc.make_weights_for_balanced_classes(in_)
@@ -123,7 +127,7 @@ if __name__ == "__main__":
 	train_loaders = [FastDataLoader(
 		dataset=env,
 		weights=env_weights,
-		batch_size=int(hparams['batch_size']*abs(i-args.holdout)),
+		batch_size=hparams['batch_size'],
 		num_workers=dataset.N_WORKERS,
 		length=FastDataLoader.INFINITE)
 		for i, (env, env_weights) in enumerate(in_splits)
@@ -135,10 +139,10 @@ if __name__ == "__main__":
 		batch_size=64,
 		num_workers=dataset.N_WORKERS,
 		length=FastDataLoader.EPOCH)
-		for env, _ in (in_splits + out_splits) if len(env) != 0]
-	eval_weights = [None for _, weights in (in_splits + out_splits) if len(_) != 0]
+		for env, _ in (in_splits + out_splits)]
+	eval_weights = [None for _, weights in (in_splits + out_splits)]
 	eval_loader_names = ['env{}_in'.format(i)
-		for i in range(len(in_splits)) if i not in args.test_envs]
+		for i in range(len(in_splits))]
 	eval_loader_names += ['env{}_out'.format(i)
 		for i in range(len(out_splits))]
 
@@ -166,9 +170,9 @@ if __name__ == "__main__":
 			for x,y in next(train_minibatches_iterator)]
 		step_vals = algorithm.update(minibatches_device)
 
-		if step % args.checkpoint_freq == 0 and False:
-			all_data = chain(*eval_loaders[:len(in_splits)])
-			algorithm.update(all_data, components=True)
+		#if step % args.checkpoint_freq == 0:
+			#all_data = chain(*eval_loaders[:len(in_splits)])
+			#algorithm.update(all_data)# components=True)
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)
 
 		for key, val in step_vals.items():

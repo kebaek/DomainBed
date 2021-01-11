@@ -48,7 +48,7 @@ if __name__ == "__main__":
 	parser.add_argument('--beta', type=float, default=100)
 	parser.add_argument('--norm', type=int, default=0)
 	parser.add_argument('--lrd', type=float, default=5e-5)
-	parser.add_argument('--lam', type=float, default=1.0)    
+	parser.add_argument('--lam', type=float, default=1.0)
 	args = parser.parse_args()
 
 	# If we ever want to implement checkpointing, just persist these values
@@ -186,10 +186,9 @@ if __name__ == "__main__":
 
 			for key, val in checkpoint_vals.items():
 				results[key] = np.mean(val)
-
 			evals = zip(eval_loader_names, eval_loaders, eval_weights)
 			for name, loader, weights in evals:
-				acc = misc.accuracy(algorithm, loader, weights, device)
+				acc = misc.accuracy(algorithm, loader, weights, device)e
 				results[name+'_acc'] = acc
 			current_val = np.average([results['env{}_out_acc'.format(i)] for i in range(len(in_splits)) if i not in args.test_envs])
 			if m <= current_val:
@@ -197,6 +196,9 @@ if __name__ == "__main__":
 				print('saved at step %d'%(step))
 				torch.save(algorithm.state_dict(),
 						   os.path.join(args.output_dir, "G.pth.tar"))
+				for name, param in algorithm.classifier.named_parameters():
+					print(name)
+					print(param)
 			if step == n_steps:
 				torch.save(algorithm.state_dict(), os.path.join(args.output_dir, "L.pth.tar"))
 
