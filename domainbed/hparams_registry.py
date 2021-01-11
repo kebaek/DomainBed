@@ -32,7 +32,7 @@ def _hparams(algorithm, dataset, random_state):
 
 	hparams['class_balanced'] = (True, False)
 	hparams['norm'] = (1,0)
-	if algorithm in ['DANN', 'CDANN','CHDANN']:
+	if algorithm in ['DANN', 'CDANN','CHDANN', 'WDANN']:
 
 		if dataset in RESNET_DATASETS:
 			hparams['lr_g'] = (5e-5, 10**random_state.uniform(-5, -3.5))
@@ -47,7 +47,7 @@ def _hparams(algorithm, dataset, random_state):
 			hparams['weight_decay_g'] = (0., 10**random_state.uniform(-6, -2))
 
 		hparams['lambda'] = (1.0, 10**random_state.uniform(-2, 2))
-		hparams['weight_decay_d'] = (0., 10**random_state.uniform(-6, -2))
+		hparams['weight_decay_d'] = (0.1, 10**random_state.uniform(-6, -2))
 		hparams['d_steps_per_g_step'] = (1, int(2**random_state.uniform(0, 3)))
 		hparams['grad_penalty'] = (0., 10**random_state.uniform(-2, 1))
 		hparams['beta1'] = (0.5, random_state.choice([0., 0.5]))
