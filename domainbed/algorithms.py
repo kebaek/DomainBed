@@ -169,7 +169,9 @@ class MCR(Algorithm):
 			p = []
 			all_y = []
 			for x,y in minibatches:
-				p.append(self.featurizer(x.cuda()).cpu().detach())
+				z = self.featurizer(x)
+				z = F.normalize(self.classifier(torch.cat((z, F.one_hot(y, self.num_classes).float()),1)))
+				p.append(z.cpu().detach())
 				all_y.append(y)
 			p, all_y = torch.cat(p), torch.cat(all_y)
 			self.svd(p, all_y)
@@ -180,7 +182,6 @@ class MCR(Algorithm):
 			all_z = F.normalize(self.classifier(torch.cat((all_z, F.one_hot(all_y, self.num_classes).float()),1)))
 			if self.hparams['norm']==2:
 				all_z = len(all_z)*all_z/torch.norm(all_z,p='fro')
-			all_y = torch.cat([y for x,y in minibatches])
 			mcr, loss_empi, loss_theo = self.criterion(all_z, all_y, self.num_classes)
 			loss = mcr
 			mi = torch.tensor(0, dtype=torch.float32).cuda()
