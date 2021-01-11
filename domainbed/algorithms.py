@@ -130,10 +130,8 @@ class ERM(Algorithm):
 			self.components[j] = vt.t()[:self.hparams['n_comp']]
 			self.singular_values[j] = s[:self.hparams['n_comp']]
 
-	def predict(self, x, y):
-		z = self.featurizer(all_x).cuda()
-		z = torch.cat((z,F.one_hot(y, self.num_classes).float()),1)
-		return self.classifier(z)
+	def predict(self, x):
+		return self.network(x)
 
 class MCR(Algorithm):
 	"""
@@ -210,10 +208,8 @@ class MCR(Algorithm):
 		self.components = LinearSVC(verbose=0, random_state=10)
 		self.components.fit(x.cpu().detach().numpy(),y.cpu().detach().numpy())
 
-	def predict(self, x, y, weighted=True):
+	def predict(self, x, weighted=True):
 		x = self.featurizer(x)
-		x = torch.cat((x,F.one_hot(y, self.num_classes).float()),1)
-		x = self.classifier(x)
 		scores_svd = []
 		for j in range(self.num_classes):
 			svd_j = torch.matmul(torch.matmul(torch.pow(F.normalize(self.singular_values[j], dim=0),2)*self.components[j].t(),self.components[j]).to(device),x.t().to(device))
