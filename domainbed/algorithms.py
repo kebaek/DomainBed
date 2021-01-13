@@ -107,7 +107,7 @@ class ERM(Algorithm):
 			all_x = torch.cat([x for x,y in minibatches])
 			all_y = torch.cat([y for x,y in minibatches])
 			all_z = self.featurizer(all_x).cuda()
-			all_z = torch.cat((all_z,10000*F.one_hot(all_y, self.num_classes).float()),1)
+			all_z = torch.cat((all_z,F.one_hot(all_y, self.num_classes).float()),1)
 			ce = F.cross_entropy(self.classifier(all_z), all_y)
 			loss = ce
 			mi = torch.tensor(0)
@@ -130,9 +130,9 @@ class ERM(Algorithm):
 			self.components[j] = vt.t()[:self.hparams['n_comp']]
 			self.singular_values[j] = s[:self.hparams['n_comp']]
 
-	def predict(self, x, y):
+	def predict(self, x):
 		z = self.featurizer(x)
-		z = torch.cat((z,10000*F.one_hot(y, self.num_classes).float()),1)
+		z = torch.cat((z,torch.zeros(len(x),self.num_classes).float()),1)
 		return self.classifier(z)
 
 class MCR(Algorithm):
@@ -208,9 +208,9 @@ class MCR(Algorithm):
 		self.components = LinearSVC(verbose=0, random_state=10)
 		self.components.fit(x.cpu().detach().numpy(),y.cpu().detach().numpy())
 
-	def predict(self, x, y, weighted=True):
+	def predict(self, x, weighted=True):
 		x = self.featurizer(x)
-		x = torch.cat((x,F.one_hot(y, self.num_classes).float()),1)
+		x = torch.cat((x,torch.zeros(len(x),self.num_classes)),1)
 		x = self.classifier(x)
 		scores_svd = []
 		for j in range(self.num_classes):

@@ -218,6 +218,6 @@ if __name__ == "__main__":
 			checkpoint_vals = collections.defaultdict(lambda: [])
 	for name, param in algorithm.classifier.named_parameters():
 		print(name)
-		print(param)  
+		print(param)
 	with open(os.path.join(args.output_dir, 'done'), 'w') as f:
 		f.write('done')
