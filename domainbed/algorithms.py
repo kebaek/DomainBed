@@ -170,7 +170,7 @@ class MCR(Algorithm):
 			all_y = []
 			for x,y in minibatches:
 				z = self.featurizer(x)
-				z = F.normalize(self.classifier(torch.cat((z, F.one_hot(y, self.num_classes).float()),1)))
+				z = F.normalize(self.classifier(torch.cat((z, F.one_hot(y, self.num_classes).cuda().float()),1)))
 				p.append(z.cpu().detach())
 				all_y.append(y)
 			p, all_y = torch.cat(p), torch.cat(all_y)
