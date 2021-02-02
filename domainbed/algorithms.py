@@ -234,9 +234,15 @@ class MCRI(Algorithm):
 		else:
 			loss = torch.tensor(0, dtype=torch.float32).cuda()
 			mi = torch.tensor(0, dtype=torch.float32).cuda()
-			all_z = self.featurizer(torch.cat([x for x,y in minibatches]))
 			if self.hparams['norm']==2:
-				all_z = len(all_z)*all_z/torch.norm(all_z,p='fro')
+				all_z = []
+				for x,y in minibatches:
+					z = self.featurizer(x)
+					z = len(z)*z/torch.norm(z,p='fro')
+					all_z.append(z)
+				all_z = torch.cat(all_z)
+			else:
+				all_z = [self.featurizer(torch.cat([x for x,y in minibatches]))]
 			all_y = []
 			i = 0
 			for x,y in minibatches:
