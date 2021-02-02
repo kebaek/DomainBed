@@ -169,8 +169,10 @@ if __name__ == "__main__":
 		step_vals = algorithm.update(minibatches_device)
 
 		if step % args.checkpoint_freq == 0:
+			algorithm.eval()
 			all_data = chain(*eval_loaders[:len(in_splits)])
 			algorithm.update(all_data, components=True)
+			algorithm.train()
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)
 
 		for key, val in step_vals.items():
