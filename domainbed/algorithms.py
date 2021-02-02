@@ -210,7 +210,7 @@ class MCR(Algorithm):
 
 	def predict(self, x, weighted=True):
 		x = self.featurizer(x)
-		x = torch.cat((x.cuda(),torch.zeros(len(x),self.num_classes)).cuda(),1)
+		x = torch.cat((x,torch.zeros(len(x),self.num_classes)).cuda(),1)
 		x = self.classifier(x)
 		scores_svd = []
 		for j in range(self.num_classes):
