@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
 		if step % args.checkpoint_freq == 0:
 			algorithm.eval()
-			all_data = chain(* (eval_loaders[:args.test_envs[0]] + eval_loaders[args.test_envs[0]:len(in_splits)]))
+			all_data = chain(* (eval_loaders[:args.test_envs[0]] + eval_loaders[args.test_envs[0]+1:len(in_splits)]))
 			algorithm.update(all_data, components=True)
 			algorithm.train()
 		checkpoint_vals['step_time'].append(time.time() - step_start_time)
@@ -218,8 +218,5 @@ if __name__ == "__main__":
 			algorithm_dict = algorithm.state_dict()
 			start_step = step + 1
 			checkpoint_vals = collections.defaultdict(lambda: [])
-	for name, param in algorithm.classifier.named_parameters():
-		print(name)
-		print(param)
 	with open(os.path.join(args.output_dir, 'done'), 'w') as f:
 		f.write('done')
