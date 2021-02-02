@@ -109,6 +109,7 @@ if __name__ == "__main__":
 	out_splits = []
 	#holdout = args.holdout
 	for env_i, env in enumerate(dataset):
+		print(len(env))
 		out, in_ = misc.split_dataset(env,
 		#in_, out = misc.split_dataset_by_class(env,
 		#	holdout[env_i],
