@@ -29,6 +29,7 @@ DATASETS = [
     # Big images
     "VLCS",
     "PACS",
+    "HuskyWolf",
     "OfficeHome",
     "TerraIncognita",
     "DomainNet",
@@ -44,6 +45,7 @@ NUM_ENVIRONMENTS = {
     "RotatedMNIST": 6,
     "ColoredMNIST": 3,
     # Big images
+    "HuskyWolf": 2,
     "VLCS": 4,
     "PACS": 4,
     "OfficeHome": 4,
@@ -264,6 +266,14 @@ class PACS(MultipleEnvironmentImageFolder):
     ENVIRONMENT_NAMES = ["A", "C", "P", "S"]
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "PACS/")
+        super().__init__(self.dir, test_envs, True, hparams)
+
+class HuskyWolf(MultipleEnvironmentImageFolder):
+    N_STEPS = 4000
+    CHECKPOINT_FREQ = 300
+    ENVIRONMENT_NAMES = ["S", "T"]
+    def __init__(self, root, test_envs, hparams):
+        self.dir = os.path.join(root, "HuskyWolf/")
         super().__init__(self.dir, test_envs, True, hparams)
 
 class DomainNet(MultipleEnvironmentImageFolder):
