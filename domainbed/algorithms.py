@@ -20,7 +20,6 @@ ALGORITHMS = [
 	'DANN',
 	'CHDANN',
 	'CDANN',
-	'WDANN',
 	'IRM',
 	'Mixup',
 	'GroupDRO',
@@ -77,10 +76,7 @@ class ERM(Algorithm):
 		super(ERM, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-		self.classifier = nn.Sequential(
-			nn.Linear(hparams['fd'] + num_classes, hparams['fd']),
-			nn.Linear(hparams['fd'], num_classes)
-		)
+		self.classifier = nn.Linear(hparams['fd'], num_classes)
 		self.network = nn.Sequential(self.featurizer, self.classifier)
 		self.networks = [self.featurizer]
 		self.optimizer = torch.optim.Adam(
@@ -107,7 +103,6 @@ class ERM(Algorithm):
 			all_x = torch.cat([x for x,y in minibatches])
 			all_y = torch.cat([y for x,y in minibatches])
 			all_z = self.featurizer(all_x).cuda()
-			all_z = torch.cat((all_z,F.one_hot(all_y, self.num_classes).float()),1)
 			ce = F.cross_entropy(self.classifier(all_z), all_y)
 			loss = ce
 			mi = torch.tensor(0)
@@ -131,9 +126,7 @@ class ERM(Algorithm):
 			self.singular_values[j] = s[:self.hparams['n_comp']]
 
 	def predict(self, x):
-		z = self.featurizer(x)
-		z = torch.cat((z,torch.zeros(len(x),self.num_classes).float()),1)
-		return self.classifier(z)
+		return self.network(x)
 
 class MCR(Algorithm):
 	"""
@@ -144,21 +137,13 @@ class MCR(Algorithm):
 		super(MCR, self).__init__(input_shape, num_classes, num_domains,
 								  hparams)
 		self.featurizer = torch.nn.DataParallel(networks.Featurizer(input_shape, self.hparams))
-		self.classifier = nn.Linear(hparams['fd'] + num_classes, hparams['fd'])
-		self.network = nn.Sequential(self.featurizer, self.classifier)
+		self.network = self.featurizer
 		self.networks = [self.featurizer]
 		self.optimizer = torch.optim.Adam(
-			self.network.parameters(),
+			self.featurizer.parameters(),
 			lr=self.hparams["lr"],
 			weight_decay=self.hparams['weight_decay']
 		)
-		#self.network = self.featurizer
-		#self.networks = [self.featurizer]
-		#self.optimizer = torch.optim.Adam(
-		#	self.featurizer.parameters(),
-		#	lr=self.hparams["lr"],
-		#	weight_decay=self.hparams['weight_decay']
-		#)
 		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=hparams['beta'], last_epoch=-1)
 		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
 		self.components = {}
@@ -169,19 +154,16 @@ class MCR(Algorithm):
 			p = []
 			all_y = []
 			for x,y in minibatches:
-				z = self.featurizer(x)
-				z = F.normalize(self.classifier(torch.cat((z, F.one_hot(y, self.num_classes).cuda().float()),1)))
-				p.append(z.cpu().detach())
+				p.append(self.featurizer(x.cuda()).cpu().detach())
 				all_y.append(y)
 			p, all_y = torch.cat(p), torch.cat(all_y)
 			self.svd(p, all_y)
 			return None
 		else:
 			all_z = self.featurizer(torch.cat([x for x,y in minibatches]))
-			all_y = torch.cat([y for x,y in minibatches])
-			all_z = F.normalize(self.classifier(torch.cat((all_z, F.one_hot(all_y, self.num_classes).float()),1)))
 			if self.hparams['norm']==2:
 				all_z = len(all_z)*all_z/torch.norm(all_z,p='fro')
+			all_y = torch.cat([y for x,y in minibatches])
 			mcr, loss_empi, loss_theo = self.criterion(all_z, all_y, self.num_classes)
 			loss = mcr
 			mi = torch.tensor(0, dtype=torch.float32).cuda()
@@ -210,8 +192,6 @@ class MCR(Algorithm):
 
 	def predict(self, x, weighted=True):
 		x = self.featurizer(x)
-		x = torch.cat((x,torch.zeros(len(x),self.num_classes)).cuda(),1)
-		x = self.classifier(x)
 		scores_svd = []
 		for j in range(self.num_classes):
 			svd_j = torch.matmul(torch.matmul(torch.pow(F.normalize(self.singular_values[j], dim=0),2)*self.components[j].t(),self.components[j]).to(device),x.t().to(device))
@@ -317,7 +297,6 @@ class AbstractDANN(Algorithm):
 		self.num_classes = num_classes
 		self.conditional = conditional
 		self.hot = hot
-		self.wasserstein = wasserstein
 		self.class_balance = class_balance
 		print(num_domains)
 		# Algorithms
@@ -372,7 +351,7 @@ class AbstractDANN(Algorithm):
 			for i, (x, y) in enumerate(minibatches)
 		])
 
-		if self.wasserstein:
+		if wasserstein:
 			E = [torch.mean(disc_out[disc_labels==i],dim=0) for i in range(len(minibatches))]
 			disc_loss = 0
 			pair_list = list(combinations(range(len(E)), 2))
@@ -566,7 +545,6 @@ class MLDG(ERM):
 	Algorithm 1 / Equation (3) from: https://arxiv.org/pdf/1710.03463.pdf
 	Related: https://arxiv.org/pdf/1703.03400.pdf
 	Related: https://arxiv.org/pdf/1910.13580.pdf
-
 	TODO: update() has at least one bug, possibly more. Disabling this whole
 	algorithm until it gets figured out.
 	"""
@@ -579,15 +557,11 @@ class MLDG(ERM):
 		Terms being computed:
 			* Li = Loss(xi, yi, params)
 			* Gi = Grad(Li, params)
-
 			* Lj = Loss(xj, yj, Optimizer(params, grad(Li, params)))
 			* Gj = Grad(Lj, params)
-
 			* params = Optimizer(params, Grad(Li + beta * Lj, params))
 			*		 = Optimizer(params, Gi + beta * Gj)
-
 		That is, when calling .step(), we want grads to be Gi + beta * Gj
-
 		For computational efficiency, we do not compute second derivatives.
 		"""
 		num_mb = len(minibatches)
