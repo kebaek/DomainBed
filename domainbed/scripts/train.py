@@ -73,6 +73,7 @@ if __name__ == "__main__":
 
 	if args.fd !=0:
 		hparams['fd']=args.fd
+		hparams['n_comp'] = args.fd
 	hparams['lambda'] = args.lam
 	if args.beta != 100:
 		hparams['beta'] = args.beta
