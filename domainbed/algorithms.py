@@ -145,7 +145,7 @@ class MCR(Algorithm):
 			weight_decay=self.hparams['weight_decay']
 		)
 		self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, hparams['decay'], gamma=hparams['beta'], last_epoch=-1)
-		self.criterion = MaximalCodingRateReduction(gam1=1, gam2=1, eps=0.5).to(device)
+		self.criterion = MaximalCodingRateReduction(gam1=hparams['gam1'], gam2=hparams['gam2'], eps=hparams['eps']).to(device)
 		self.components = {}
 		self.singular_values = {}
 
