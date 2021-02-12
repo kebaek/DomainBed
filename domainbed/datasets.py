@@ -271,10 +271,10 @@ class PACS(MultipleEnvironmentImageFolder):
 class HuskyWolf(MultipleEnvironmentImageFolder):
     N_STEPS = 4000
     CHECKPOINT_FREQ = 300
-    ENVIRONMENT_NAMES = ["S", "T"]
+    ENVIRONMENT_NAMES = ["E","S", "T"]
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "HuskyWolf/")
-        super().__init__(self.dir, test_envs, True, hparams)
+        super().__init__(self.dir, test_envs, False, hparams)
 
 class DomainNet(MultipleEnvironmentImageFolder):
     N_STEPS = 5001
