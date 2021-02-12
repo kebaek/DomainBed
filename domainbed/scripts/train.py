@@ -172,7 +172,7 @@ if __name__ == "__main__":
 
 		if step % args.checkpoint_freq == 0:
 			algorithm.eval()
-			all_data = chain(* (eval_loaders[:args.test_envs[0]] + eval_loaders[args.test_envs[0]+1:len(in_splits)]))
+			all_data = chain(* ([eval_loaders[i] for i in range(in_splits) if i not in args.test_envs]))
 			algorithm.update(all_data, components=True)
 			print(algorithm.singular_values)
 			algorithm.train()
